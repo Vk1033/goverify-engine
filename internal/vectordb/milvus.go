@@ -3,8 +3,9 @@ package vectordb
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
+
+	"github.com/rs/zerolog"
 
 	"github.com/milvus-io/milvus-sdk-go/v2/client"
 	"github.com/milvus-io/milvus-sdk-go/v2/entity"
@@ -28,10 +29,10 @@ type Client interface {
 
 type MilvusClient struct {
 	client client.Client
-	logger *slog.Logger
+	logger *zerolog.Logger
 }
 
-func NewMilvusClient(cfg *config.Config, logger *slog.Logger) (Client, error) {
+func NewMilvusClient(cfg *config.Config, logger *zerolog.Logger) (Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -48,9 +49,9 @@ func NewMilvusClient(cfg *config.Config, logger *slog.Logger) (Client, error) {
 	}
 
 	if err := mc.initCollection(ctx); err != nil {
-		logger.Error("Failed to initialize milvus collection", "error", err)
+		logger.Error().Err(err).Msg("Failed to initialize milvus collection")
 	} else {
-		logger.Info("Milvus collection initialized and loaded", "collection", CollectionName)
+		logger.Info().Str("collection", CollectionName).Msg("Milvus collection initialized and loaded")
 	}
 
 	return mc, nil
@@ -63,7 +64,7 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 	}
 
 	if !has {
-		m.logger.Info("Creating collection", "name", CollectionName)
+		m.logger.Info().Str("name", CollectionName).Msg("Creating collection")
 		schema := &entity.Schema{
 			CollectionName: CollectionName,
 			Description:    "KYC Identity Records",
@@ -83,7 +84,7 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 			return fmt.Errorf("create collection failed: %w", err)
 		}
 
-		m.logger.Info("Creating index", "collection", CollectionName)
+		m.logger.Info().Str("collection", CollectionName).Msg("Creating index")
 		idx, err := entity.NewIndexHNSW(entity.L2, 16, 200)
 		if err != nil {
 			return fmt.Errorf("failed to create index entity: %w", err)
@@ -93,7 +94,7 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 		}
 	}
 
-	m.logger.Info("Loading collection", "name", CollectionName)
+	m.logger.Info().Str("name", CollectionName).Msg("Loading collection")
 	if err := m.client.LoadCollection(ctx, CollectionName, false); err != nil {
 		return fmt.Errorf("load collection failed: %w", err)
 	}
@@ -152,7 +153,7 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 		}
 
 		if i == 0 {
-			m.logger.Warn("Milvus search failed, attempting to reload collection", "error", err)
+			m.logger.Warn().Err(err).Msg("Milvus search failed, attempting to reload collection")
 			_ = m.client.LoadCollection(ctx, CollectionName, true)
 			time.Sleep(500 * time.Millisecond)
 			continue

@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"net/http"
+
+	"github.com/rs/zerolog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
@@ -21,7 +22,7 @@ import (
 	"github.com/vk1033/goverify-engine/pkg/logger"
 )
 
-func NewHTTPServer(lc fx.Lifecycle, cfg *config.Config, router *gin.Engine, log *slog.Logger) *http.Server {
+func NewHTTPServer(lc fx.Lifecycle, cfg *config.Config, router *gin.Engine, log *zerolog.Logger) *http.Server {
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Port),
 		Handler: router,
@@ -29,16 +30,16 @@ func NewHTTPServer(lc fx.Lifecycle, cfg *config.Config, router *gin.Engine, log 
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			log.Info("Starting HTTP server", "port", cfg.Port)
+			log.Info().Int("port", cfg.Port).Msg("Starting HTTP server")
 			go func() {
 				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					log.Error("Failed to start server", "error", err)
+					log.Error().Err(err).Msg("Failed to start server")
 				}
 			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			log.Info("Stopping HTTP server")
+			log.Info().Msg("Stopping HTTP server")
 			return srv.Shutdown(ctx)
 		},
 	})
@@ -64,13 +65,13 @@ var rootCmd = &cobra.Command{
 				api.NewRouter,
 				NewHTTPServer,
 			),
-			fx.WithLogger(func(log *slog.Logger) fxevent.Logger {
-				return &fxevent.SlogLogger{Logger: log}
+			fx.WithLogger(func(log *zerolog.Logger) fxevent.Logger {
+				return &fxevent.ConsoleLogger{W: log}
 			}),
-			fx.Invoke(func(lc fx.Lifecycle, log *slog.Logger) {
+			fx.Invoke(func(lc fx.Lifecycle, log *zerolog.Logger) {
 				shutdown, err := observability.InitTracer(context.Background(), "kyc-api")
 				if err != nil {
-					log.Error("Failed to initialize tracer", "error", err)
+					log.Error().Err(err).Msg("Failed to initialize tracer")
 					return
 				}
 				lc.Append(fx.Hook{

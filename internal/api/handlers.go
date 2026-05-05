@@ -1,11 +1,11 @@
 package api
 
 import (
-
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/rs/zerolog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
@@ -20,10 +20,10 @@ type Handler struct {
 	service    service.KYCService
 	redis      *redis.Client
 	jwtManager *JWTManager
-	logger     *slog.Logger
+	logger     *zerolog.Logger
 }
 
-func NewHandler(p kafka.Producer, s service.KYCService, r *redis.Client, j *JWTManager, l *slog.Logger) *Handler {
+func NewHandler(p kafka.Producer, s service.KYCService, r *redis.Client, j *JWTManager, l *zerolog.Logger) *Handler {
 	return &Handler{
 		producer:   p,
 		service:    s,
@@ -57,7 +57,7 @@ func (h *Handler) Enroll(c *gin.Context) {
 	// Push to Kafka
 	err := h.producer.PublishEnrollment(c.Request.Context(), txnID, req)
 	if err != nil {
-		h.logger.Error("Failed to publish enrollment", "error", err, "txnID", txnID)
+		h.logger.Error().Err(err).Str("txnID", txnID).Msg("Failed to publish enrollment")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to enqueue request"})
 		return
 	}
@@ -65,7 +65,7 @@ func (h *Handler) Enroll(c *gin.Context) {
 	// Save pending status to Redis
 	err = h.redis.Set(c.Request.Context(), txnID, string(domain.StatusPending), 24*time.Hour).Err()
 	if err != nil {
-		h.logger.Error("Failed to set status in redis", "error", err, "txnID", txnID)
+		h.logger.Error().Err(err).Str("txnID", txnID).Msg("Failed to set status in redis")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save status"})
 		return
 	}
@@ -100,14 +100,14 @@ func (h *Handler) Verify(c *gin.Context) {
 
 	err := h.producer.PublishVerification(c.Request.Context(), txnID, req)
 	if err != nil {
-		h.logger.Error("Failed to publish verification", "error", err, "txnID", txnID)
+		h.logger.Error().Err(err).Str("txnID", txnID).Msg("Failed to publish verification")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to enqueue request"})
 		return
 	}
 
 	err = h.redis.Set(c.Request.Context(), txnID, string(domain.StatusPending), 24*time.Hour).Err()
 	if err != nil {
-		h.logger.Error("Failed to set status in redis", "error", err, "txnID", txnID)
+		h.logger.Error().Err(err).Str("txnID", txnID).Msg("Failed to set status in redis")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save status"})
 		return
 	}
@@ -135,11 +135,11 @@ func (h *Handler) Status(c *gin.Context) {
 
 	val, err := h.redis.Get(c.Request.Context(), txnID).Result()
 	if err == redis.Nil {
-		h.logger.Warn("Transaction not found in redis", "txnID", txnID)
+		h.logger.Warn().Str("txnID", txnID).Msg("Transaction not found in redis")
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	} else if err != nil {
-		h.logger.Error("Redis error during status check", "error", err, "txnID", txnID)
+		h.logger.Error().Err(err).Str("txnID", txnID).Msg("Redis error during status check")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
@@ -174,7 +174,7 @@ func (h *Handler) Search(c *gin.Context) {
 
 	results, err := h.service.SearchIdentities(c.Request.Context(), name, gender)
 	if err != nil {
-		h.logger.Error("Search failed", "error", err)
+		h.logger.Error().Err(err).Msg("Search failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Search failed"})
 		return
 	}
@@ -208,7 +208,7 @@ func (h *Handler) Login(c *gin.Context) {
 
 	token, err := h.jwtManager.Generate(req.Username)
 	if err != nil {
-		h.logger.Error("Failed to generate token", "error", err)
+		h.logger.Error().Err(err).Msg("Failed to generate token")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}

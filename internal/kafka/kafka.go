@@ -3,8 +3,9 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
 	"time"
+
+	"github.com/rs/zerolog"
 
 	"github.com/segmentio/kafka-go"
 	"github.com/vk1033/goverify-engine/internal/config"
@@ -20,10 +21,10 @@ type Producer interface {
 type producerImpl struct {
 	enrollWriter *kafka.Writer
 	verifyWriter *kafka.Writer
-	logger       *slog.Logger
+	logger       *zerolog.Logger
 }
 
-func NewProducer(cfg *config.Config, logger *slog.Logger) Producer {
+func NewProducer(cfg *config.Config, logger *zerolog.Logger) Producer {
 	ew := &kafka.Writer{
 		Addr:     kafka.TCP(cfg.Kafka.Brokers...),
 		Topic:    cfg.Kafka.EnrollTopic,

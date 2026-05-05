@@ -3,11 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
+
+	"github.com/rs/zerolog"
 
 	"github.com/vk1033/goverify-engine/internal/domain"
 	"github.com/vk1033/goverify-engine/internal/embedding"
+	"github.com/vk1033/goverify-engine/internal/observability"
 	"github.com/vk1033/goverify-engine/internal/vectordb"
 	"github.com/vk1033/goverify-engine/pkg/hash"
 	"go.opentelemetry.io/otel"
@@ -37,10 +39,10 @@ const (
 type serviceImpl struct {
 	embeddings embedding.Service
 	milvus     vectordb.Client
-	logger     *slog.Logger
+	logger     *zerolog.Logger
 }
 
-func NewKYCService(e embedding.Service, m vectordb.Client, logger *slog.Logger) KYCService {
+func NewKYCService(e embedding.Service, m vectordb.Client, logger *zerolog.Logger) KYCService {
 	return &serviceImpl{
 		embeddings: e,
 		milvus:     m,
@@ -53,7 +55,7 @@ func (s *serviceImpl) ProcessEnrollment(ctx context.Context, txnID string, req d
 	defer span.End()
 	span.SetAttributes(attribute.String("txn_id", txnID), attribute.String("user_name", req.Name))
 
-	s.logger.InfoContext(ctx, "processing enrollment", "txnID", txnID)
+	s.logger.Info().Ctx(ctx).Str("txnID", txnID).Msg("processing enrollment")
 
 	faceEmb, err := s.embeddings.GenerateFaceEmbedding(req.PhotoBase64)
 	if err != nil {
@@ -86,16 +88,21 @@ func (s *serviceImpl) ProcessEnrollment(ctx context.Context, txnID string, req d
 		return fmt.Errorf("milvus insert failed: %w", err)
 	}
 
-	s.logger.InfoContext(ctx, "enrollment successful", "txnID", txnID)
+	s.logger.Info().Ctx(ctx).Str("txnID", txnID).Msg("enrollment successful")
 	return nil
 }
 
 func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req domain.KYCRequest) (*domain.VerificationResult, error) {
+	start := time.Now()
+	defer func() {
+		observability.KycVerifyLatencyMs.Observe(float64(time.Since(start).Milliseconds()))
+	}()
+
 	ctx, span := tracer.Start(ctx, "KYCService.ProcessVerification")
 	defer span.End()
 	span.SetAttributes(attribute.String("txn_id", txnID), attribute.String("user_name", req.Name))
 
-	s.logger.InfoContext(ctx, "processing verification", "txnID", txnID)
+	s.logger.Info().Ctx(ctx).Str("txnID", txnID).Msg("processing verification")
 
 	faceEmb, err := s.embeddings.GenerateFaceEmbedding(req.PhotoBase64)
 	if err != nil {
@@ -108,7 +115,9 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 	}
 
 	// Fetch top 5 similar faces
+	searchStart := time.Now()
 	results, err := s.milvus.SearchSimilar(ctx, faceEmb, nameEmb, 5)
+	observability.VectorSearchLatencyMs.Observe(float64(time.Since(searchStart).Milliseconds()))
 	if err != nil {
 		return nil, fmt.Errorf("milvus search failed: %w", err)
 	}
@@ -189,7 +198,7 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 		},
 		CreatedAt: time.Now(),
 	}
-	s.logger.InfoContext(ctx, "verification completed", "txnID", txnID, "status", res.Status, "final_score", finalScore)
+	s.logger.Info().Ctx(ctx).Str("txnID", txnID).Str("status", string(res.Status)).Float64("final_score", finalScore).Msg("verification completed")
 	return res, nil
 }
 
@@ -198,6 +207,6 @@ func (s *serviceImpl) SearchIdentities(ctx context.Context, name string, gender 
 	defer span.End()
 	span.SetAttributes(attribute.String("name", name), attribute.String("gender", gender))
 
-	s.logger.InfoContext(ctx, "searching identities", "name", name, "gender", gender)
+	s.logger.Info().Ctx(ctx).Str("name", name).Str("gender", gender).Msg("searching identities")
 	return s.milvus.QueryIdentities(ctx, name, gender)
 }

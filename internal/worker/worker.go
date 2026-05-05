@@ -1,11 +1,12 @@
 package worker
 
 import (
-	"context"
 	"bytes"
+	"context"
 	"encoding/json"
-	"log/slog"
 	"net/http"
+
+	"github.com/rs/zerolog"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -20,10 +21,10 @@ type Worker struct {
 	svc       service.KYCService
 	redis     *redis.Client
 	client    *http.Client
-	logger    *slog.Logger
+	logger    *zerolog.Logger
 }
 
-func NewWorker(c *kafka.Consumers, s service.KYCService, r *redis.Client, l *slog.Logger) *Worker {
+func NewWorker(c *kafka.Consumers, s service.KYCService, r *redis.Client, l *zerolog.Logger) *Worker {
 	return &Worker{
 		consumers: c,
 		svc:       s,
@@ -36,9 +37,9 @@ func NewWorker(c *kafka.Consumers, s service.KYCService, r *redis.Client, l *slo
 func (w *Worker) Start(ctx context.Context) {
 	// Start Metrics Server for the worker
 	go func() {
-		w.logger.Info("Starting worker metrics server", "port", 9090)
+		w.logger.Info().Int("port", 9090).Msg("Starting worker metrics server")
 		if err := http.ListenAndServe(":9090", observability.MetricsHandler()); err != nil {
-			w.logger.Error("Worker metrics server failed", "error", err)
+			w.logger.Error().Err(err).Msg("Worker metrics server failed")
 		}
 	}()
 
@@ -53,26 +54,28 @@ func (w *Worker) consumeEnroll(ctx context.Context) {
 			if ctx.Err() != nil {
 				return
 			}
-			w.logger.Error("EnrollReader failed", "error", err)
+			w.logger.Error().Err(err).Msg("EnrollReader failed")
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
+		observability.KafkaConsumerLagMs.Observe(float64(time.Since(m.Time).Milliseconds()))
+
 		txnID := string(m.Key)
 		var req domain.KYCRequest
 		if err := json.Unmarshal(m.Value, &req); err != nil {
-			w.logger.ErrorContext(ctx, "failed to unmarshal enroll req", "error", err)
+			w.logger.Error().Ctx(ctx).Err(err).Msg("failed to unmarshal enroll req")
 			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
-				w.logger.Error("Failed to update status in redis", "error", rerr, "txnID", txnID)
+				w.logger.Error().Err(rerr).Str("txnID", txnID).Msg("Failed to update status in redis")
 			}
 			continue
 		}
 
 		if err := w.svc.ProcessEnrollment(ctx, txnID, req); err != nil {
-			w.logger.ErrorContext(ctx, "failed to process enrollment", "error", err, "txnID", txnID)
+			w.logger.Error().Ctx(ctx).Err(err).Str("txnID", txnID).Msg("failed to process enrollment")
 			observability.KycEnrollmentsTotal.WithLabelValues("error").Inc()
 			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
-				w.logger.Error("Failed to update status in redis", "error", rerr, "txnID", txnID)
+				w.logger.Error().Err(rerr).Str("txnID", txnID).Msg("Failed to update status in redis")
 			}
 			continue
 		}
@@ -80,7 +83,7 @@ func (w *Worker) consumeEnroll(ctx context.Context) {
 		observability.KycEnrollmentsTotal.WithLabelValues("success").Inc()
 
 		if err := w.redis.Set(ctx, txnID, string(domain.StatusSuccess), 24*time.Hour).Err(); err != nil {
-			w.logger.Error("failed to update status in redis", "error", err, "txnID", txnID)
+			w.logger.Error().Err(err).Str("txnID", txnID).Msg("failed to update status in redis")
 		}
 
 		if req.CallbackURL != "" {
@@ -100,27 +103,29 @@ func (w *Worker) consumeVerify(ctx context.Context) {
 			if ctx.Err() != nil {
 				return
 			}
-			w.logger.Error("VerifyReader failed", "error", err)
+			w.logger.Error().Err(err).Msg("VerifyReader failed")
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
+		observability.KafkaConsumerLagMs.Observe(float64(time.Since(m.Time).Milliseconds()))
+
 		txnID := string(m.Key)
 		var req domain.KYCRequest
 		if err := json.Unmarshal(m.Value, &req); err != nil {
-			w.logger.ErrorContext(ctx, "failed to unmarshal verify req", "error", err)
+			w.logger.Error().Ctx(ctx).Err(err).Msg("failed to unmarshal verify req")
 			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
-				w.logger.Error("Failed to update status in redis", "error", rerr, "txnID", txnID)
+				w.logger.Error().Err(rerr).Str("txnID", txnID).Msg("Failed to update status in redis")
 			}
 			continue
 		}
 
 		res, err := w.svc.ProcessVerification(ctx, txnID, req)
 		if err != nil {
-			w.logger.ErrorContext(ctx, "failed to process verification", "error", err, "txnID", txnID)
+			w.logger.Error().Ctx(ctx).Err(err).Str("txnID", txnID).Msg("failed to process verification")
 			observability.KycVerificationsTotal.WithLabelValues("error").Inc()
 			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
-				w.logger.Error("Failed to update status in redis", "error", rerr, "txnID", txnID)
+				w.logger.Error().Err(rerr).Str("txnID", txnID).Msg("Failed to update status in redis")
 			}
 			continue
 		}
@@ -130,7 +135,7 @@ func (w *Worker) consumeVerify(ctx context.Context) {
 
 		b, _ := json.Marshal(res)
 		if err := w.redis.Set(ctx, txnID, b, 24*time.Hour).Err(); err != nil {
-			w.logger.Error("failed to update status in redis", "error", err, "txnID", txnID)
+			w.logger.Error().Err(err).Str("txnID", txnID).Msg("failed to update status in redis")
 		}
 
 		if req.CallbackURL != "" {
@@ -142,27 +147,27 @@ func (w *Worker) consumeVerify(ctx context.Context) {
 func (w *Worker) sendCallback(ctx context.Context, url string, payload interface{}) {
 	b, err := json.Marshal(payload)
 	if err != nil {
-		w.logger.ErrorContext(ctx, "failed to marshal callback payload", "error", err)
+		w.logger.Error().Ctx(ctx).Err(err).Msg("failed to marshal callback payload")
 		return
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(b))
 	if err != nil {
-		w.logger.ErrorContext(ctx, "failed to create callback request", "error", err)
+		w.logger.Error().Ctx(ctx).Err(err).Msg("failed to create callback request")
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := w.client.Do(req)
 	if err != nil {
-		w.logger.ErrorContext(ctx, "failed to send callback", "error", err, "url", url)
+		w.logger.Error().Ctx(ctx).Err(err).Str("url", url).Msg("failed to send callback")
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		w.logger.ErrorContext(ctx, "callback returned error status", "status", resp.Status, "url", url)
+		w.logger.Error().Ctx(ctx).Str("status", resp.Status).Str("url", url).Msg("callback returned error status")
 	} else {
-		w.logger.InfoContext(ctx, "callback sent successfully", "url", url)
+		w.logger.Info().Ctx(ctx).Str("url", url).Msg("callback sent successfully")
 	}
 }

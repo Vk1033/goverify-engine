@@ -1,46 +1,42 @@
 package logger
 
 import (
-	"context"
-	"log/slog"
 	"os"
 
+	"github.com/rs/zerolog"
 	"github.com/vk1033/goverify-engine/internal/config"
 	"go.opentelemetry.io/otel/trace"
 )
 
-// TraceIDHandler is a middleware slog.Handler that adds trace_id to logs
-type TraceIDHandler struct {
-	slog.Handler
-}
+// TracingHook is a zerolog hook that adds trace_id to logs
+type TracingHook struct{}
 
-func (h *TraceIDHandler) Handle(ctx context.Context, r slog.Record) error {
+func (h TracingHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+	ctx := e.GetCtx()
+	if ctx == nil {
+		return
+	}
 	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
-		r.AddAttrs(
-			slog.String("trace_id", span.SpanContext().TraceID().String()),
-			slog.String("span_id", span.SpanContext().SpanID().String()),
-		)
+		e.Str("trace_id", span.SpanContext().TraceID().String()).
+		  Str("span_id", span.SpanContext().SpanID().String())
 	}
-	return h.Handler.Handle(ctx, r)
 }
 
-func NewLogger(cfg *config.Config) *slog.Logger {
-	var handler slog.Handler
+func NewLogger(cfg *config.Config) *zerolog.Logger {
+	var logger zerolog.Logger
 	
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
+
 	if cfg.Environment == "production" {
-		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelInfo,
-		})
+		logger = zerolog.New(os.Stdout).With().Timestamp().Logger().Level(zerolog.InfoLevel)
 	} else {
-		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelDebug,
-		})
+		// Use console writer for non-production environments
+		consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05.000"}
+		logger = zerolog.New(consoleWriter).With().Timestamp().Logger().Level(zerolog.DebugLevel)
 	}
 
-	// Wrap handler with TraceIDHandler
-	handler = &TraceIDHandler{Handler: handler}
+	// Add TracingHook
+	logger = logger.Hook(TracingHook{})
 
-	logger := slog.New(handler)
-	slog.SetDefault(logger)
-	return logger
+	return &logger
 }

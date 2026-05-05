@@ -1,10 +1,10 @@
 package api
 
 import (
-	"log/slog"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	sloggin "github.com/samber/slog-gin"
+	"github.com/rs/zerolog"
 	"github.com/vk1033/goverify-engine/internal/config"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -12,15 +12,24 @@ import (
 	_ "github.com/vk1033/goverify-engine/docs"
 )
 
-func NewRouter(cfg *config.Config, logger *slog.Logger, handler *Handler, jwtManager *JWTManager) *gin.Engine {
+func NewRouter(cfg *config.Config, logger *zerolog.Logger, handler *Handler, jwtManager *JWTManager) *gin.Engine {
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	r := gin.New()
 
-	// Use slog for gin logging
-	r.Use(sloggin.New(logger))
+	// Use custom zerolog middleware
+	r.Use(func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		logger.Info().
+			Str("method", c.Request.Method).
+			Str("path", c.Request.URL.Path).
+			Int("status", c.Writer.Status()).
+			Dur("latency", time.Since(start)).
+			Msg("HTTP Request")
+	})
 	r.Use(gin.Recovery())
 	r.Use(MetricsMiddleware())
 

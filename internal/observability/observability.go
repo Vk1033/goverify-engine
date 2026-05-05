@@ -78,6 +78,37 @@ var (
 			Buckets:   []float64{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0},
 		},
 	)
+
+	// New Metrics
+	KycVerifyLatencyMs = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Namespace: "goverify",
+			Subsystem: "kyc",
+			Name:      "verify_latency_ms",
+			Help:      "Latency of KYC verification requests in milliseconds.",
+			Buckets:   []float64{10, 50, 100, 250, 500, 1000, 2500, 5000},
+		},
+	)
+
+	KafkaConsumerLagMs = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Namespace: "goverify",
+			Subsystem: "kafka",
+			Name:      "consumer_lag_ms",
+			Help:      "Estimated consumer lag in milliseconds based on message processing delay.",
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		},
+	)
+
+	VectorSearchLatencyMs = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Namespace: "goverify",
+			Subsystem: "vectordb",
+			Name:      "search_latency_ms",
+			Help:      "Latency of vector database similarity search in milliseconds.",
+			Buckets:   []float64{5, 10, 25, 50, 100, 250, 500, 1000},
+		},
+	)
 )
 
 func InitTracer(ctx context.Context, serviceName string) (func(), error) {

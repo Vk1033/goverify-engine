@@ -22,50 +22,25 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
+          "color": { "mode": "thresholds" },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
+              { "color": "green", "value": null }
             ]
           }
-        },
-        "overrides": []
+        }
       },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 0
-      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
       "id": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
         "textMode": "auto"
       },
-      "pluginVersion": "8.0.0",
-      "targets": [
-        {
-          "expr": "sum(goverify_kyc_enrollments_total)",
-          "refId": "A"
-        }
-      ],
+      "targets": [{ "expr": "sum(goverify_kyc_enrollments_total)", "refId": "A" }],
       "title": "Total Enrollments",
       "type": "stat"
     },
@@ -73,50 +48,25 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
+          "color": { "mode": "thresholds" },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
+              { "color": "green", "value": null }
             ]
           }
-        },
-        "overrides": []
+        }
       },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 0
-      },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
       "id": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
         "textMode": "auto"
       },
-      "pluginVersion": "8.0.0",
-      "targets": [
-        {
-          "expr": "sum(goverify_kyc_verifications_total)",
-          "refId": "A"
-        }
-      ],
+      "targets": [{ "expr": "sum(goverify_kyc_verifications_total)", "refId": "A" }],
       "title": "Total Verifications",
       "type": "stat"
     },
@@ -124,231 +74,223 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
+          "color": { "mode": "thresholds" },
+          "unit": "ms"
+        }
       },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 0
-      },
-      "id": 3,
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "id": 10,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
         "textMode": "auto"
       },
-      "pluginVersion": "8.0.0",
-      "targets": [
-        {
-          "expr": "goverify_kyc_similarity_score_sum / goverify_kyc_similarity_score_count",
-          "refId": "A"
-        }
-      ],
-      "title": "Avg Confidence Score",
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(goverify_kyc_verify_latency_ms_bucket[1m])) by (le))", "refId": "A" }],
+      "title": "Verify Latency (p95)",
       "type": "stat"
     },
     {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
+          "color": { "mode": "thresholds" },
+          "unit": "ms"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "textMode": "auto"
+      },
+      "targets": [{ "expr": "goverify_kafka_consumer_lag_ms{quantile=\"0.9\"}", "refId": "A" }],
+      "title": "Consumer Lag (p90)",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "ms"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "textMode": "auto"
+      },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(goverify_vectordb_search_latency_ms_bucket[1m])) by (le))", "refId": "A" }],
+      "title": "Vector Search (p95)",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "id": 13,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "textMode": "auto"
+      },
+      "targets": [{ "expr": "sum(rate(goverify_kyc_verifications_total{status=\"error\"}[5m])) / sum(rate(goverify_kyc_verifications_total[5m])) * 100", "refId": "A" }],
+      "title": "Error Rate",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
           "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
+          "unit": "ms"
+        }
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 4
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
       "id": 4,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
       },
       "targets": [
-        {
-          "expr": "rate(goverify_kyc_verifications_total[1m])",
-          "legendFormat": "Verification Rate",
-          "refId": "A"
-        },
-         {
-          "expr": "rate(goverify_kyc_enrollments_total[1m])",
-          "legendFormat": "Enrollment Rate",
-          "refId": "B"
-        }
+        { "expr": "histogram_quantile(0.50, sum(rate(goverify_kyc_verify_latency_ms_bucket[5m])) by (le))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum(rate(goverify_kyc_verify_latency_ms_bucket[5m])) by (le))", "legendFormat": "p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum(rate(goverify_kyc_verify_latency_ms_bucket[5m])) by (le))", "legendFormat": "p99", "refId": "C" }
       ],
-      "title": "Transaction Rates (per min)",
+      "title": "Verification Latency (Percentiles)",
       "type": "timeseries"
     },
     {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
+          "color": { "mode": "palette-classic" },
           "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            }
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2
           },
-          "mappings": []
-        },
-        "overrides": []
+          "unit": "ms"
+        }
       },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 12,
-        "y": 4
-      },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 4 },
       "id": 5,
       "options": {
-        "displayLabels": [
-          "percent"
-        ],
-        "legend": {
-          "displayMode": "list",
-          "placement": "right"
-        },
-        "pieType": "pie",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "tooltip": {
-          "mode": "single"
-        }
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
       },
       "targets": [
-        {
-          "expr": "sum by (status) (goverify_kyc_verifications_total)",
-          "legendFormat": "{{status}}",
-          "refId": "A"
-        }
+        { "expr": "goverify_kafka_consumer_lag_ms{quantile=\"0.9\"}", "legendFormat": "Kafka Lag (p90)", "refId": "A" }
       ],
-      "title": "Verification Success Ratio",
+      "title": "Kafka Processing Lag",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 4 },
+      "id": 6,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(goverify_vectordb_search_latency_ms_bucket[5m])) by (le))", "legendFormat": "Search Latency (p95)", "refId": "A" }
+      ],
+      "title": "Vector DB Search Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "id": 7,
+      "options": {
+        "displayLabels": ["percent"],
+        "legend": { "displayMode": "list", "placement": "right" },
+        "pieType": "donut"
+      },
+      "targets": [{ "expr": "sum by (status) (goverify_kyc_verifications_total)", "legendFormat": "{{status}}", "refId": "A" }],
+      "title": "Match Distribution",
       "type": "piechart"
     },
     {
-      "datasource": "Loki",
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 12
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }
+        }
       },
-      "id": 6,
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 12 },
+      "id": 8,
       "options": {
-        "dedupStrategy": "none",
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        { "expr": "rate(goverify_kyc_enrollments_total[1m])", "legendFormat": "Enrollment Rate", "refId": "A" },
+        { "expr": "rate(goverify_kyc_verifications_total[1m])", "legendFormat": "Verification Rate", "refId": "B" }
+      ],
+      "title": "Throughput (per min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Loki",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 20 },
+      "id": 9,
+      "options": {
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": false,
         "showTime": true,
         "sortOrder": "Descending",
         "wrapLogMessage": true
       },
-      "targets": [
-        {
-          "expr": "{container=~\"goverify-engine-kyc-.*\"}",
-          "refId": "A"
-        }
-      ],
-      "title": "Application Logs",
+      "targets": [{ "expr": "{container=~\"goverify-engine-kyc-.*\"}", "refId": "A" }],
+      "title": "System Logs (Loki)",
       "type": "logs"
     }
   ],
   "refresh": "5s",
   "schemaVersion": 30,
   "style": "dark",
-  "tags": [],
-  "templating": {
-    "list": []
-  },
-  "time": {
-    "from": "now-15m",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "",
-  "title": "KYC Engine Performance",
+  "time": { "from": "now-15m", "to": "now" },
+  "title": "KYC Engine Observability",
   "uid": "kyc_performance",
-  "version": 2
+  "version": 3
 }
