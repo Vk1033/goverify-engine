@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	CollectionName = "kyc_identities"
+	CollectionName = "kyc_identities_v2"
 	DimFace        = 512
 	DimName        = 768
 )
@@ -71,7 +71,6 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 			{Name: "transaction_id", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "128"}},
 			{Name: "demographic_hash", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "256"}},
 			{Name: "face_embedding", DataType: entity.FieldTypeFloatVector, TypeParams: map[string]string{"dim": fmt.Sprintf("%d", DimFace)}},
-			{Name: "name_embedding", DataType: entity.FieldTypeFloatVector, TypeParams: map[string]string{"dim": fmt.Sprintf("%d", DimName)}},
 		},
 	}
 
@@ -88,14 +87,6 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 		return err
 	}
 
-	idxName, err := entity.NewIndexHNSW(entity.COSINE, 16, 200)
-	if err != nil {
-		return err
-	}
-	if err := m.client.CreateIndex(ctx, CollectionName, "name_embedding", idxName, false); err != nil {
-		return err
-	}
-
 	return m.client.LoadCollection(ctx, CollectionName, false)
 }
 
@@ -103,14 +94,12 @@ func (m *MilvusClient) InsertIdentity(ctx context.Context, record *domain.Identi
 	txnIds := []string{record.TransactionID}
 	hashes := []string{record.DemographicHash}
 	faces := [][]float32{record.FaceEmbedding}
-	names := [][]float32{record.NameEmbedding}
 
 	idCol := entity.NewColumnVarChar("transaction_id", txnIds)
 	hashCol := entity.NewColumnVarChar("demographic_hash", hashes)
 	faceCol := entity.NewColumnFloatVector("face_embedding", DimFace, faces)
-	nameCol := entity.NewColumnFloatVector("name_embedding", DimName, names)
 
-	_, err := m.client.Insert(ctx, CollectionName, "", idCol, hashCol, faceCol, nameCol)
+	_, err := m.client.Insert(ctx, CollectionName, "", idCol, hashCol, faceCol)
 	if err != nil {
 		return err
 	}

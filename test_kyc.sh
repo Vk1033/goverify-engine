@@ -10,16 +10,16 @@ ENROLL_RESP=$(curl -s -X POST http://localhost:8080/kyc/enroll \
     "gender": "FEMALE"
 }')
 
-echo $ENROLL_RESP | jq . || echo $ENROLL_RESP
+echo $ENROLL_RESP
 
-TXN_ID=$(echo $ENROLL_RESP | grep -o '"transaction_id":"[^"]*' | cut -d'"' -f4)
+TXN_ID=$(echo $ENROLL_RESP | python3 -c "import sys, json; print(json.load(sys.stdin)['transaction_id'])")
 
 echo -e "\n=== Waiting for async processing ==="
 sleep 2
 
 echo -e "\n=== Checking Status for $TXN_ID ==="
 curl -s -X GET "http://localhost:8080/kyc/status/$TXN_ID" \
-  -H "Authorization: Bearer my-test-token" | jq . || curl -s -X GET "http://localhost:8080/kyc/status/$TXN_ID" -H "Authorization: Bearer my-test-token"
+  -H "Authorization: Bearer my-test-token" 
 
 echo -e "\n\n=== Testing KYC Verification ==="
 VERIFY_RESP=$(curl -s -X POST http://localhost:8080/kyc/verify \
@@ -32,13 +32,13 @@ VERIFY_RESP=$(curl -s -X POST http://localhost:8080/kyc/verify \
     "gender": "FEMALE"
 }')
 
-echo $VERIFY_RESP | jq . || echo $VERIFY_RESP
+echo $VERIFY_RESP
 
-VERIFY_TXN_ID=$(echo $VERIFY_RESP | grep -o '"transaction_id":"[^"]*' | cut -d'"' -f4)
+VERIFY_TXN_ID=$(echo $VERIFY_RESP | python3 -c "import sys, json; print(json.load(sys.stdin)['transaction_id'])")
 
 echo -e "\n=== Waiting for async verification processing ==="
 sleep 2
 
 echo -e "\n=== Checking Status for $VERIFY_TXN_ID ==="
 curl -s -X GET "http://localhost:8080/kyc/status/$VERIFY_TXN_ID" \
-  -H "Authorization: Bearer my-test-token" | jq . || curl -s -X GET "http://localhost:8080/kyc/status/$VERIFY_TXN_ID" -H "Authorization: Bearer my-test-token"
+  -H "Authorization: Bearer my-test-token"
