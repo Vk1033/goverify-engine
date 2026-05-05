@@ -59,7 +59,7 @@ func (w *Worker) consumeEnroll(ctx context.Context) {
 		}
 
 		txnID := string(m.Key)
-		var req domain.KYCEnrollRequest
+		var req domain.KYCRequest
 		if err := json.Unmarshal(m.Value, &req); err != nil {
 			w.logger.ErrorContext(ctx, "failed to unmarshal enroll req", "error", err)
 			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
@@ -106,7 +106,7 @@ func (w *Worker) consumeVerify(ctx context.Context) {
 		}
 
 		txnID := string(m.Key)
-		var req domain.KYCVerifyRequest
+		var req domain.KYCRequest
 		if err := json.Unmarshal(m.Value, &req); err != nil {
 			w.logger.ErrorContext(ctx, "failed to unmarshal verify req", "error", err)
 			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {

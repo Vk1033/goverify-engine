@@ -12,8 +12,8 @@ import (
 )
 
 type Producer interface {
-	PublishEnrollment(ctx context.Context, txnID string, req domain.KYCEnrollRequest) error
-	PublishVerification(ctx context.Context, txnID string, req domain.KYCVerifyRequest) error
+	PublishEnrollment(ctx context.Context, txnID string, req domain.KYCRequest) error
+	PublishVerification(ctx context.Context, txnID string, req domain.KYCRequest) error
 	Close() error
 }
 
@@ -41,7 +41,7 @@ func NewProducer(cfg *config.Config, logger *slog.Logger) Producer {
 	}
 }
 
-func (p *producerImpl) PublishEnrollment(ctx context.Context, txnID string, req domain.KYCEnrollRequest) error {
+func (p *producerImpl) PublishEnrollment(ctx context.Context, txnID string, req domain.KYCRequest) error {
 	b, err := json.Marshal(req)
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func (p *producerImpl) PublishEnrollment(ctx context.Context, txnID string, req 
 	return p.enrollWriter.WriteMessages(ctx, msg)
 }
 
-func (p *producerImpl) PublishVerification(ctx context.Context, txnID string, req domain.KYCVerifyRequest) error {
+func (p *producerImpl) PublishVerification(ctx context.Context, txnID string, req domain.KYCRequest) error {
 	b, err := json.Marshal(req)
 	if err != nil {
 		return err

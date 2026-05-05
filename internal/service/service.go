@@ -18,8 +18,8 @@ import (
 var tracer = otel.Tracer("kyc-service")
 
 type KYCService interface {
-	ProcessEnrollment(ctx context.Context, txnID string, req domain.KYCEnrollRequest) error
-	ProcessVerification(ctx context.Context, txnID string, req domain.KYCVerifyRequest) (*domain.VerificationResult, error)
+	ProcessEnrollment(ctx context.Context, txnID string, req domain.KYCRequest) error
+	ProcessVerification(ctx context.Context, txnID string, req domain.KYCRequest) (*domain.VerificationResult, error)
 	SearchIdentities(ctx context.Context, name string, gender string) ([]*domain.IdentityRecord, error)
 }
 
@@ -48,7 +48,7 @@ func NewKYCService(e embedding.Service, m vectordb.Client, logger *slog.Logger) 
 	}
 }
 
-func (s *serviceImpl) ProcessEnrollment(ctx context.Context, txnID string, req domain.KYCEnrollRequest) error {
+func (s *serviceImpl) ProcessEnrollment(ctx context.Context, txnID string, req domain.KYCRequest) error {
 	ctx, span := tracer.Start(ctx, "KYCService.ProcessEnrollment")
 	defer span.End()
 	span.SetAttributes(attribute.String("txn_id", txnID), attribute.String("user_name", req.Name))
@@ -90,7 +90,7 @@ func (s *serviceImpl) ProcessEnrollment(ctx context.Context, txnID string, req d
 	return nil
 }
 
-func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req domain.KYCVerifyRequest) (*domain.VerificationResult, error) {
+func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req domain.KYCRequest) (*domain.VerificationResult, error) {
 	ctx, span := tracer.Start(ctx, "KYCService.ProcessVerification")
 	defer span.End()
 	span.SetAttributes(attribute.String("txn_id", txnID), attribute.String("user_name", req.Name))

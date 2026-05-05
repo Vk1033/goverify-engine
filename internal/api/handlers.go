@@ -39,14 +39,14 @@ func NewHandler(p kafka.Producer, s service.KYCService, r *redis.Client, j *JWTM
 // @Tags         kyc
 // @Accept       json
 // @Produce      json
-// @Param        request  body      domain.KYCEnrollRequest  true  "Enrollment Data"
+// @Param        request  body      domain.KYCRequest  true  "Enrollment Data"
 // @Success      202      {object}  domain.AsyncResponse
 // @Failure      400      {object}  map[string]string
 // @Failure      500      {object}  map[string]string
 // @Router       /kyc/enroll [post]
 // @Security     Bearer
 func (h *Handler) Enroll(c *gin.Context) {
-	var req domain.KYCEnrollRequest
+	var req domain.KYCRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -83,14 +83,14 @@ func (h *Handler) Enroll(c *gin.Context) {
 // @Tags         kyc
 // @Accept       json
 // @Produce      json
-// @Param        request  body      domain.KYCVerifyRequest  true  "Verification Data"
+// @Param        request  body      domain.KYCRequest  true  "Verification Data"
 // @Success      202      {object}  domain.AsyncResponse
 // @Failure      400      {object}  map[string]string
 // @Failure      500      {object}  map[string]string
 // @Router       /kyc/verify [post]
 // @Security     Bearer
 func (h *Handler) Verify(c *gin.Context) {
-	var req domain.KYCVerifyRequest
+	var req domain.KYCRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

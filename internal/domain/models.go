@@ -2,17 +2,8 @@ package domain
 
 import "time"
 
-// KYCEnrollRequest represents the input for /kyc/enroll
-type KYCEnrollRequest struct {
-	PhotoBase64 string `json:"photo_base64" binding:"required"`
-	Name        string `json:"name" binding:"required"`
-	DOB         string `json:"dob" binding:"required" example:"1990-01-01"`
-	Gender      string `json:"gender" binding:"required" example:"FEMALE"`
-	CallbackURL string `json:"callback_url,omitempty" example:"http://client-service.local/webhook"`
-}
-
-// KYCVerifyRequest represents the input for /kyc/verify
-type KYCVerifyRequest struct {
+// KYCRequest represents the input for /kyc/enroll and /kyc/verify
+type KYCRequest struct {
 	PhotoBase64 string `json:"photo_base64" binding:"required"`
 	Name        string `json:"name" binding:"required"`
 	DOB         string `json:"dob" binding:"required" example:"1990-01-01"`
