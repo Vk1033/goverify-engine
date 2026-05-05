@@ -1,0 +1,6 @@
+apiVersion: v2
+name: goverify
+description: A Helm chart for GoVerify KYC Engine
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
