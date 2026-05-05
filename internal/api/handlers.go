@@ -12,17 +12,20 @@ import (
 	"github.com/google/uuid"
 	"github.com/vk1033/goverify-engine/internal/domain"
 	"github.com/vk1033/goverify-engine/internal/kafka"
+	"github.com/vk1033/goverify-engine/internal/service"
 )
 
 type Handler struct {
 	producer kafka.Producer
+	service  service.KYCService
 	redis    *redis.Client
 	logger   *slog.Logger
 }
 
-func NewHandler(p kafka.Producer, r *redis.Client, l *slog.Logger) *Handler {
+func NewHandler(p kafka.Producer, s service.KYCService, r *redis.Client, l *slog.Logger) *Handler {
 	return &Handler{
 		producer: p,
+		service:  s,
 		redis:    r,
 		logger:   l,
 	}
@@ -118,4 +121,19 @@ func (h *Handler) Status(c *gin.Context) {
 		"transaction_id": txnID,
 		"status":         val,
 	})
+}
+
+// Search handles the GET /kyc/search endpoint
+func (h *Handler) Search(c *gin.Context) {
+	name := c.Query("name")
+	gender := c.Query("gender")
+
+	results, err := h.service.SearchIdentities(c.Request.Context(), name, gender)
+	if err != nil {
+		h.logger.Error("Search failed", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Search failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, results)
 }

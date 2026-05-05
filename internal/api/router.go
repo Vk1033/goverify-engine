@@ -27,6 +27,7 @@ func NewRouter(cfg *config.Config, logger *slog.Logger, handler *Handler) *gin.E
 		api.POST("/enroll", handler.Enroll)
 		api.POST("/verify", handler.Verify)
 		api.GET("/status/:transaction_id", handler.Status)
+		api.GET("/search", handler.Search)
 	}
 
 	return r

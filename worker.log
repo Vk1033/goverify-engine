@@ -109,3 +109,23 @@ time=2026-05-05T11:10:00.651Z level=INFO msg="processing enrollment" txnID=txn_3
 time=2026-05-05T11:10:00.847Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_3d2a9927-3411-4a08-9db4-7968c6805519
 time=2026-05-05T11:10:11.728Z level=INFO msg="processing verification" txnID=txn_f86bdb1b-cd35-47d7-8331-3d9d4225f066
 time=2026-05-05T11:10:11.883Z level=ERROR msg="failed to process verification" error="milvus search failed: code: UnexpectedError, reason: code: CollectionNotExists, reason: can't find collection: kyc_identities" txnID=txn_f86bdb1b-cd35-47d7-8331-3d9d4225f066
+time=2026-05-05T11:19:58.074Z level=INFO msg="processing enrollment" txnID=txn_d2a21943-c209-49ae-a0cc-c57fdda08823
+time=2026-05-05T11:19:58.305Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_d2a21943-c209-49ae-a0cc-c57fdda08823
+time=2026-05-05T11:22:46.797Z level=INFO msg="processing enrollment" txnID=txn_61e5b63e-a4c0-4d41-9da8-91adae0568b5
+time=2026-05-05T11:22:46.998Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_61e5b63e-a4c0-4d41-9da8-91adae0568b5
+time=2026-05-05T11:24:18.969Z level=INFO msg="processing enrollment" txnID=txn_b14cea1a-f449-43c5-bfa3-392f7d40e59a
+time=2026-05-05T11:24:19.216Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_b14cea1a-f449-43c5-bfa3-392f7d40e59a
+time=2026-05-05T11:24:24.003Z level=INFO msg="processing verification" txnID=txn_3b3c1960-b02f-4385-85f6-a6a31b1cddfe
+time=2026-05-05T11:24:24.177Z level=ERROR msg="failed to process verification" error="milvus search failed: code: UnexpectedError, reason: code: CollectionNotExists, reason: can't find collection: kyc_identities" txnID=txn_3b3c1960-b02f-4385-85f6-a6a31b1cddfe
+time=2026-05-05T11:27:55.418Z level=INFO msg="processing enrollment" txnID=txn_0b39a642-dcc9-41b0-8425-9383050e0603
+time=2026-05-05T11:27:55.644Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_0b39a642-dcc9-41b0-8425-9383050e0603
+time=2026-05-05T11:28:04.461Z level=INFO msg="processing verification" txnID=txn_dd6b7c72-cfaf-4dc4-8d81-ec826afeaa0d
+time=2026-05-05T11:28:04.620Z level=ERROR msg="failed to process verification" error="milvus search failed: code: UnexpectedError, reason: code: CollectionNotExists, reason: can't find collection: kyc_identities" txnID=txn_dd6b7c72-cfaf-4dc4-8d81-ec826afeaa0d
+time=2026-05-05T11:28:49.696Z level=INFO msg="processing enrollment" txnID=txn_36f64307-3ecf-44bb-9b9d-601a56a60da9
+time=2026-05-05T11:28:49.914Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_36f64307-3ecf-44bb-9b9d-601a56a60da9
+time=2026-05-05T11:28:54.728Z level=INFO msg="processing verification" txnID=txn_47a61acb-8648-4e8a-9691-0e8074023d2f
+time=2026-05-05T11:28:54.898Z level=ERROR msg="failed to process verification" error="milvus search failed: code: UnexpectedError, reason: code: CollectionNotExists, reason: can't find collection: kyc_identities" txnID=txn_47a61acb-8648-4e8a-9691-0e8074023d2f
+time=2026-05-05T11:30:57.023Z level=INFO msg="processing enrollment" txnID=txn_29bfeb82-15d8-443b-ae1d-d36ab6b1b24b
+time=2026-05-05T11:30:57.264Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_29bfeb82-15d8-443b-ae1d-d36ab6b1b24b
+time=2026-05-05T11:31:26.156Z level=INFO msg="processing verification" txnID=txn_0b0f5c20-1dad-4e4c-91d7-41b9d825273b
+time=2026-05-05T11:31:26.313Z level=ERROR msg="failed to process verification" error="milvus search failed: code: UnexpectedError, reason: code: CollectionNotExists, reason: can't find collection: kyc_identities" txnID=txn_0b0f5c20-1dad-4e4c-91d7-41b9d825273b

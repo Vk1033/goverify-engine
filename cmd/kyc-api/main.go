@@ -13,7 +13,10 @@ import (
 
 	"github.com/vk1033/goverify-engine/internal/api"
 	"github.com/vk1033/goverify-engine/internal/config"
+	"github.com/vk1033/goverify-engine/internal/embedding"
 	"github.com/vk1033/goverify-engine/internal/kafka"
+	"github.com/vk1033/goverify-engine/internal/service"
+	"github.com/vk1033/goverify-engine/internal/vectordb"
 	"github.com/vk1033/goverify-engine/pkg/logger"
 )
 
@@ -52,6 +55,9 @@ var rootCmd = &cobra.Command{
 				logger.NewLogger,
 				api.NewRedisClient,
 				kafka.NewProducer,
+				embedding.NewMockService,
+				vectordb.NewMilvusClient,
+				service.NewKYCService,
 				api.NewHandler,
 				api.NewRouter,
 				NewHTTPServer,

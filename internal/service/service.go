@@ -15,6 +15,7 @@ import (
 type KYCService interface {
 	ProcessEnrollment(ctx context.Context, txnID string, req domain.KYCEnrollRequest) error
 	ProcessVerification(ctx context.Context, txnID string, req domain.KYCVerifyRequest) (*domain.VerificationResult, error)
+	SearchIdentities(ctx context.Context, name string, gender string) ([]*domain.IdentityRecord, error)
 }
 
 type serviceImpl struct {
@@ -51,6 +52,9 @@ func (s *serviceImpl) ProcessEnrollment(ctx context.Context, txnID string, req d
 
 	record := &domain.IdentityRecord{
 		TransactionID:   txnID,
+		Name:            req.Name,
+		DOB:             req.DOB,
+		Gender:          req.Gender,
 		NameEmbedding:   nameEmb,
 		FaceEmbedding:   faceEmb,
 		DemographicHash: demographicHash,
@@ -109,30 +113,38 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 		bestMatch = results[0] // fallback to highest face similarity if demographic doesn't match
 	}
 
-	// Mock similarities for the result (since milvus Search API in this mock isn't returning scores directly without distances logic)
-	// We'll set high confidence if demographic matched.
-	faceSimilarity := float32(0.95) // Should be computed based on Milvus distance
-	nameSimilarity := float32(0.90) // Should be computed based on cosine of NameEmbs
+	// Calculate similarity from L2 distance. 
+	// For normalized vectors, L2 squared is 2(1-cos). 
+	// Here we use a simpler heuristic for the hackathon: 1.0 - (dist / max_expected_dist)
+	distance := bestMatch.Score
+	similarity := 1.0 - (float64(distance) / 2.0)
+	if similarity < 0 {
+		similarity = 0
+	}
 
 	status := domain.StatusNoMatch
-	if bestDemographicMatch {
+	if bestDemographicMatch && similarity > 0.8 {
 		status = domain.StatusMatched
-	} else if faceSimilarity > 0.8 {
+	} else if similarity > 0.7 {
 		status = domain.StatusPartial
 	}
 
 	res := &domain.VerificationResult{
 		TransactionID:   txnID,
 		Status:          status,
-		ConfidenceScore: (faceSimilarity + nameSimilarity) / 2.0,
+		ConfidenceScore: float32(similarity),
 		Details: domain.VerificationDetails{
-			FaceSimilarity:   faceSimilarity,
-			NameSimilarity:   nameSimilarity,
+			FaceSimilarity:   float32(similarity),
+			NameSimilarity:   float32(similarity),
 			DemographicMatch: bestDemographicMatch,
 		},
 		CreatedAt: time.Now(),
 	}
-
 	s.logger.Info("verification completed", "txnID", txnID, "status", res.Status)
 	return res, nil
+}
+
+func (s *serviceImpl) SearchIdentities(ctx context.Context, name string, gender string) ([]*domain.IdentityRecord, error) {
+	s.logger.Info("searching identities", "name", name, "gender", gender)
+	return s.milvus.QueryIdentities(ctx, name, gender)
 }

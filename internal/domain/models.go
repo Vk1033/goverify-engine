@@ -54,10 +54,14 @@ type VerificationDetails struct {
 
 // IdentityRecord is what we store in the Vector DB / Metadata store
 type IdentityRecord struct {
-	ID              int64     // Milvus primary key
-	TransactionID   string    // Original enrollment ID
-	NameEmbedding   []float32 // 768D
-	FaceEmbedding   []float32 // 512D
-	DemographicHash string    // Argon2 hash
-	CreatedAt       time.Time
+	ID              int64     `json:"-"`
+	TransactionID   string    `json:"transaction_id"`
+	Name            string    `json:"name"`
+	DOB             string    `json:"dob"`
+	Gender          string    `json:"gender"`
+	NameEmbedding   []float32 `json:"-"`
+	FaceEmbedding   []float32 `json:"-"`
+	DemographicHash string    `json:"demographic_hash"`
+	Score           float32   `json:"score,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
 }

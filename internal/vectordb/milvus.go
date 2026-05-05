@@ -13,14 +13,16 @@ import (
 )
 
 const (
-	CollectionName = "kyc_identities_v7"
+	CollectionName = "kyc_identities_v9"
 	DimFace        = 512
 	DimName        = 768
+	DimCombined    = DimFace + DimName
 )
 
 type Client interface {
 	InsertIdentity(ctx context.Context, record *domain.IdentityRecord) error
 	SearchSimilar(ctx context.Context, faceEmbedding []float32, nameEmbedding []float32, topK int) ([]*domain.IdentityRecord, error)
+	QueryIdentities(ctx context.Context, name string, gender string) ([]*domain.IdentityRecord, error)
 	Close() error
 }
 
@@ -70,7 +72,10 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 				{Name: "id", DataType: entity.FieldTypeInt64, PrimaryKey: true, AutoID: true},
 				{Name: "transaction_id", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "128"}},
 				{Name: "demographic_hash", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "256"}},
-				{Name: "face_embedding", DataType: entity.FieldTypeFloatVector, TypeParams: map[string]string{"dim": fmt.Sprintf("%d", DimFace)}},
+				{Name: "name", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "256"}},
+				{Name: "dob", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "32"}},
+				{Name: "gender", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "16"}},
+				{Name: "identity_signature", DataType: entity.FieldTypeFloatVector, TypeParams: map[string]string{"dim": fmt.Sprintf("%d", DimCombined)}},
 			},
 		}
 
@@ -79,11 +84,11 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 		}
 
 		m.logger.Info("Creating index", "collection", CollectionName)
-		idxFace, err := entity.NewIndexHNSW(entity.L2, 16, 200)
+		idx, err := entity.NewIndexHNSW(entity.L2, 16, 200)
 		if err != nil {
 			return fmt.Errorf("failed to create index entity: %w", err)
 		}
-		if err := m.client.CreateIndex(ctx, CollectionName, "face_embedding", idxFace, false); err != nil {
+		if err := m.client.CreateIndex(ctx, CollectionName, "identity_signature", idx, false); err != nil {
 			return fmt.Errorf("create index failed: %w", err)
 		}
 	}
@@ -99,13 +104,22 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 func (m *MilvusClient) InsertIdentity(ctx context.Context, record *domain.IdentityRecord) error {
 	txnIds := []string{record.TransactionID}
 	hashes := []string{record.DemographicHash}
-	faces := [][]float32{record.FaceEmbedding}
+	names := []string{record.Name}
+	dobs := []string{record.DOB}
+	genders := []string{record.Gender}
+	combined := append([]float32{}, record.FaceEmbedding...)
+	combined = append(combined, record.NameEmbedding...)
+
+	signatures := [][]float32{combined}
 
 	idCol := entity.NewColumnVarChar("transaction_id", txnIds)
 	hashCol := entity.NewColumnVarChar("demographic_hash", hashes)
-	faceCol := entity.NewColumnFloatVector("face_embedding", DimFace, faces)
+	nameCol := entity.NewColumnVarChar("name", names)
+	dobCol := entity.NewColumnVarChar("dob", dobs)
+	genderCol := entity.NewColumnVarChar("gender", genders)
+	sigCol := entity.NewColumnFloatVector("identity_signature", DimCombined, signatures)
 
-	_, err := m.client.Insert(ctx, CollectionName, "", idCol, hashCol, faceCol)
+	_, err := m.client.Insert(ctx, CollectionName, "", idCol, hashCol, nameCol, dobCol, genderCol, sigCol)
 	if err != nil {
 		return fmt.Errorf("insert failed: %w", err)
 	}
@@ -125,9 +139,13 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 	var err error
 
 	// Retry once if not loaded
+	combined := append([]float32{}, faceEmbedding...)
+	combined = append(combined, nameEmbedding...)
+
+	// Retry once if not loaded
 	for i := 0; i < 2; i++ {
-		searchResult, err = m.client.Search(ctx, CollectionName, []string{}, "", []string{"transaction_id", "demographic_hash"}, 
-			[]entity.Vector{entity.FloatVector(faceEmbedding)}, "face_embedding", entity.L2, topK, sp)
+		searchResult, err = m.client.Search(ctx, CollectionName, []string{}, "", []string{"transaction_id", "demographic_hash", "name", "dob", "gender"}, 
+			[]entity.Vector{entity.FloatVector(combined)}, "identity_signature", entity.L2, topK, sp)
 		
 		if err == nil {
 			break
@@ -144,44 +162,113 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 	if err != nil {
 		return nil, err
 	}
-		
-	if err != nil {
-		return nil, err
-	}
 
-	var results []*domain.IdentityRecord
+	var records []*domain.IdentityRecord
 	for _, res := range searchResult {
 		for i := 0; i < res.ResultCount; i++ {
-			// Extract fields
-			var txnID string
-			var hash string
+			var txnID, hash, name, dob, gender string
 			
-			// We iterate through Fields to find our output fields
 			for _, field := range res.Fields {
-				if field.Name() == "transaction_id" {
-					if vCol, ok := field.(*entity.ColumnVarChar); ok {
-						txnID, _ = vCol.ValueByIdx(i)
+				switch field.Name() {
+				case "transaction_id":
+					if v, ok := field.(*entity.ColumnVarChar); ok {
+						txnID, _ = v.ValueByIdx(i)
 					}
-				}
-				if field.Name() == "demographic_hash" {
-					if vCol, ok := field.(*entity.ColumnVarChar); ok {
-						hash, _ = vCol.ValueByIdx(i)
+				case "demographic_hash":
+					if v, ok := field.(*entity.ColumnVarChar); ok {
+						hash, _ = v.ValueByIdx(i)
+					}
+				case "name":
+					if v, ok := field.(*entity.ColumnVarChar); ok {
+						name, _ = v.ValueByIdx(i)
+					}
+				case "dob":
+					if v, ok := field.(*entity.ColumnVarChar); ok {
+						dob, _ = v.ValueByIdx(i)
+					}
+				case "gender":
+					if v, ok := field.(*entity.ColumnVarChar); ok {
+						gender, _ = v.ValueByIdx(i)
 					}
 				}
 			}
 
-			// Note: Milvus scores for COSINE are distances if using older versions or similarities depending on index.
-			// Let's just collect the matched records. We can refine logic in the service layer.
-			results = append(results, &domain.IdentityRecord{
+			records = append(records, &domain.IdentityRecord{
 				TransactionID:   txnID,
 				DemographicHash: hash,
-				// Note: face embedding and name embedding aren't returned by default unless requested, 
-				// we could request them but for verification we just need the hash for exact match.
+				Name:            name,
+				DOB:             dob,
+				Gender:          gender,
+				Score:           res.Scores[i],
 			})
 		}
 	}
+	return records, nil
+}
 
-	return results, nil
+func (m *MilvusClient) QueryIdentities(ctx context.Context, name string, gender string) ([]*domain.IdentityRecord, error) {
+	expr := ""
+	if name != "" && gender != "" {
+		expr = fmt.Sprintf("name == \"%s\" && gender == \"%s\"", name, gender)
+	} else if name != "" {
+		expr = fmt.Sprintf("name == \"%s\"", name)
+	} else if gender != "" {
+		expr = fmt.Sprintf("gender == \"%s\"", gender)
+	}
+
+	queryResult, err := m.client.Query(ctx, CollectionName, []string{}, expr, []string{"transaction_id", "demographic_hash", "name", "dob", "gender"})
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+
+	var records []*domain.IdentityRecord
+	for _, field := range queryResult {
+		// Milvus Query returns columns. We need to reconstruct records.
+		// For simplicity in the mock, we assume all columns have the same length.
+		// However, it's easier to use Search with an empty vector if we want record-wise results, 
+		// but Query is the correct way for scalar filtering.
+		
+		// Let's implement a simple record reconstruction from columns.
+		rowCount := 0
+		if field.Name() == "transaction_id" {
+			if v, ok := field.(*entity.ColumnVarChar); ok {
+				rowCount = v.Len()
+			}
+		}
+		if rowCount == 0 { continue }
+		
+		for i := 0; i < rowCount; i++ {
+			record := &domain.IdentityRecord{}
+			for _, f := range queryResult {
+				switch f.Name() {
+				case "transaction_id":
+					if v, ok := f.(*entity.ColumnVarChar); ok {
+						record.TransactionID, _ = v.ValueByIdx(i)
+					}
+				case "demographic_hash":
+					if v, ok := f.(*entity.ColumnVarChar); ok {
+						record.DemographicHash, _ = v.ValueByIdx(i)
+					}
+				case "name":
+					if v, ok := f.(*entity.ColumnVarChar); ok {
+						record.Name, _ = v.ValueByIdx(i)
+					}
+				case "dob":
+					if v, ok := f.(*entity.ColumnVarChar); ok {
+						record.DOB, _ = v.ValueByIdx(i)
+					}
+				case "gender":
+					if v, ok := f.(*entity.ColumnVarChar); ok {
+						record.Gender, _ = v.ValueByIdx(i)
+					}
+				}
+			}
+			records = append(records, record)
+		}
+		break // Found rowCount, processed all columns for these rows
+	}
+
+	return records, nil
 }
 
 func (m *MilvusClient) Close() error {
