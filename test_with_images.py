@@ -104,6 +104,12 @@ if __name__ == "__main__":
     TOKEN = login("admin", "password123")
     print("Token obtained successfully.")
 
+    print("\n--- 1.1 Testing Health Check & Metrics ---")
+    health = requests.get(f"{API_URL}/health")
+    print(f"Health Status: {health.json().get('status')} (Expected UP)")
+    metrics = requests.get(f"{API_URL}/metrics")
+    print(f"Metrics Endpoint: {'OK' if metrics.status_code == 200 else 'FAILED'}")
+
     print("\n--- 2. Testing Enrollment with Callback ---")
     name, dob, gender = "John Doe", "1985-05-20", "MALE"
     enroll_resp = enroll(img_path, name, dob, gender, callback_url=CALLBACK_URL)
@@ -146,6 +152,23 @@ if __name__ == "__main__":
                 break
             time.sleep(2)
         print(f"Verification Result: {v_status.get('status')} (Score: {v_status.get('confidence_score')})")
+        details = v_status.get('details', {})
+        if details:
+            print(f"Details: Face: {details.get('face_similarity')}, Name: {details.get('name_similarity')}, Demo Match: {details.get('demographic_match')}")
+            if details.get('explanation'):
+                print(f"Explanation: {details.get('explanation')}")
+
+        print("\n--- 3.1 Testing Negative Match (Different Person) ---")
+        # Use a dummy base64 or a different image if available
+        # Here we just use a different name/dob to trigger NO_MATCH or PARTIAL_MATCH
+        neg_resp = verify(img_path, "Different Person", "2000-01-01", "FEMALE")
+        n_txn_id = neg_resp['transaction_id']
+        print(f"Negative Test Transaction ID: {n_txn_id}")
+        time.sleep(5) # wait for worker
+        n_status = get_status(n_txn_id)
+        print(f"Negative Test Result: {n_status.get('status')} (Score: {n_status.get('confidence_score')})")
+        if n_status.get('details', {}).get('explanation'):
+            print(f"Explanation: {n_status['details']['explanation']}")
 
         print("\n--- 4. Testing Identity Search Feature ---")
         

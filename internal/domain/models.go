@@ -52,6 +52,7 @@ type VerificationDetails struct {
 	FaceSimilarity   float32 `json:"face_similarity"`
 	NameSimilarity   float32 `json:"name_similarity"`
 	DemographicMatch bool    `json:"demographic_match"`
+	Explanation      string  `json:"explanation,omitempty"`
 }
 
 // IdentityRecord is what we store in the Vector DB / Metadata store
