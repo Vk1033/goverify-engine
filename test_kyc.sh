@@ -15,7 +15,7 @@ echo $ENROLL_RESP
 TXN_ID=$(echo $ENROLL_RESP | python3 -c "import sys, json; print(json.load(sys.stdin)['transaction_id'])")
 
 echo -e "\n=== Waiting for async processing ==="
-sleep 2
+sleep 5
 
 echo -e "\n=== Checking Status for $TXN_ID ==="
 curl -s -X GET "http://localhost:8080/kyc/status/$TXN_ID" \
@@ -37,7 +37,7 @@ echo $VERIFY_RESP
 VERIFY_TXN_ID=$(echo $VERIFY_RESP | python3 -c "import sys, json; print(json.load(sys.stdin)['transaction_id'])")
 
 echo -e "\n=== Waiting for async verification processing ==="
-sleep 2
+sleep 5
 
 echo -e "\n=== Checking Status for $VERIFY_TXN_ID ==="
 curl -s -X GET "http://localhost:8080/kyc/status/$VERIFY_TXN_ID" \

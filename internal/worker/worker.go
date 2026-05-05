@@ -49,17 +49,23 @@ func (w *Worker) consumeEnroll(ctx context.Context) {
 		var req domain.KYCEnrollRequest
 		if err := json.Unmarshal(m.Value, &req); err != nil {
 			w.logger.Error("failed to unmarshal enroll req", "error", err)
-			w.redis.Set(ctx, txnID, domain.StatusError, 24*time.Hour)
+			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
+				w.logger.Error("Failed to update status in redis", "error", rerr, "txnID", txnID)
+			}
 			continue
 		}
 
 		if err := w.svc.ProcessEnrollment(ctx, txnID, req); err != nil {
 			w.logger.Error("failed to process enrollment", "error", err, "txnID", txnID)
-			w.redis.Set(ctx, txnID, domain.StatusError, 24*time.Hour)
+			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
+				w.logger.Error("Failed to update status in redis", "error", rerr, "txnID", txnID)
+			}
 			continue
 		}
 
-		w.redis.Set(ctx, txnID, domain.StatusMatched, 24*time.Hour) // Enrolled successfully
+		if err := w.redis.Set(ctx, txnID, string(domain.StatusSuccess), 24*time.Hour).Err(); err != nil {
+			w.logger.Error("failed to update status in redis", "error", err, "txnID", txnID)
+		}
 	}
 }
 
@@ -79,19 +85,25 @@ func (w *Worker) consumeVerify(ctx context.Context) {
 		var req domain.KYCVerifyRequest
 		if err := json.Unmarshal(m.Value, &req); err != nil {
 			w.logger.Error("failed to unmarshal verify req", "error", err)
-			w.redis.Set(ctx, txnID, domain.StatusError, 24*time.Hour)
+			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
+				w.logger.Error("Failed to update status in redis", "error", rerr, "txnID", txnID)
+			}
 			continue
 		}
 
 		res, err := w.svc.ProcessVerification(ctx, txnID, req)
 		if err != nil {
 			w.logger.Error("failed to process verification", "error", err, "txnID", txnID)
-			w.redis.Set(ctx, txnID, domain.StatusError, 24*time.Hour)
+			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
+				w.logger.Error("Failed to update status in redis", "error", rerr, "txnID", txnID)
+			}
 			continue
 		}
 
 		b, _ := json.Marshal(res)
-		w.redis.Set(ctx, txnID, b, 24*time.Hour)
+		if err := w.redis.Set(ctx, txnID, b, 24*time.Hour).Err(); err != nil {
+			w.logger.Error("failed to update status in redis", "error", err, "txnID", txnID)
+		}
 
 		// In a real system, we'd also trigger a Callback URL if provided
 	}

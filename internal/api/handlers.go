@@ -3,6 +3,7 @@ package api
 import (
 
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -16,12 +17,14 @@ import (
 type Handler struct {
 	producer kafka.Producer
 	redis    *redis.Client
+	logger   *slog.Logger
 }
 
-func NewHandler(p kafka.Producer, r *redis.Client) *Handler {
+func NewHandler(p kafka.Producer, r *redis.Client, l *slog.Logger) *Handler {
 	return &Handler{
 		producer: p,
 		redis:    r,
+		logger:   l,
 	}
 }
 
@@ -38,12 +41,18 @@ func (h *Handler) Enroll(c *gin.Context) {
 	// Push to Kafka
 	err := h.producer.PublishEnrollment(c.Request.Context(), txnID, req)
 	if err != nil {
+		h.logger.Error("Failed to publish enrollment", "error", err, "txnID", txnID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to enqueue request"})
 		return
 	}
 
 	// Save pending status to Redis
-	h.redis.Set(c.Request.Context(), txnID, domain.StatusPending, 24*time.Hour)
+	err = h.redis.Set(c.Request.Context(), txnID, string(domain.StatusPending), 24*time.Hour).Err()
+	if err != nil {
+		h.logger.Error("Failed to set status in redis", "error", err, "txnID", txnID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save status"})
+		return
+	}
 
 	c.JSON(http.StatusAccepted, domain.AsyncResponse{
 		TransactionID: txnID,
@@ -64,11 +73,17 @@ func (h *Handler) Verify(c *gin.Context) {
 
 	err := h.producer.PublishVerification(c.Request.Context(), txnID, req)
 	if err != nil {
+		h.logger.Error("Failed to publish verification", "error", err, "txnID", txnID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to enqueue request"})
 		return
 	}
 
-	h.redis.Set(c.Request.Context(), txnID, domain.StatusPending, 24*time.Hour)
+	err = h.redis.Set(c.Request.Context(), txnID, string(domain.StatusPending), 24*time.Hour).Err()
+	if err != nil {
+		h.logger.Error("Failed to set status in redis", "error", err, "txnID", txnID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save status"})
+		return
+	}
 
 	c.JSON(http.StatusAccepted, domain.AsyncResponse{
 		TransactionID: txnID,
@@ -83,9 +98,11 @@ func (h *Handler) Status(c *gin.Context) {
 
 	val, err := h.redis.Get(c.Request.Context(), txnID).Result()
 	if err == redis.Nil {
+		h.logger.Warn("Transaction not found in redis", "txnID", txnID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 		return
 	} else if err != nil {
+		h.logger.Error("Redis error during status check", "error", err, "txnID", txnID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}

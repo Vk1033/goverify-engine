@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/vk1033/goverify-engine/internal/domain"
 	"github.com/vk1033/goverify-engine/internal/embedding"
@@ -129,6 +130,7 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 			NameSimilarity:   nameSimilarity,
 			DemographicMatch: bestDemographicMatch,
 		},
+		CreatedAt: time.Now(),
 	}
 
 	s.logger.Info("verification completed", "txnID", txnID, "status", res.Status)

@@ -38,6 +38,60 @@ time=2026-05-05T09:57:20.526Z level=INFO msg=started
 time=2026-05-05T09:57:36.360Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_114fbbcd-f69e-40bc-b47e-4386ac0bbbf4
 time=2026-05-05T10:00:27.087Z level=INFO msg="processing enrollment" txnID=txn_fd39436d-f82d-41fa-9db3-658465bb48ed
 time=2026-05-05T10:00:27.281Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_fd39436d-f82d-41fa-9db3-658465bb48ed
-9:57:45.353Z level=ERROR msg="failed to process verification" error="milvus search failed: checkIfLoaded failed when search, collection:kyc_identities, partitions:[], err = GetCollectionInfo failed, collection = kyc_identities, err = collection 466085275226083335 has not been loaded to memory or load failed" txnID=txn_901d07b8-f652-4747-bb83-babc7f4d6eac
-time=2026-05-05T10:00:27.086Z level=INFO msg="processing verification" txnID=txn_d3fff2c3-0672-4edc-8b33-32bbd0da2fc1
-time=2026-05-05T10:00:27.246Z level=ERROR msg="failed to process verification" error="milvus search failed: checkIfLoaded failed when search, collection:kyc_identities, partitions:[], err = GetCollectionInfo failed, collection = kyc_identities, err = collection 466085275226083335 has not been loaded to memory or load failed" txnID=txn_d3fff2c3-0672-4edc-8b33-32bbd0da2fc1
+time=2026-05-05T10:02:05.934Z level=INFO msg="processing enrollment" txnID=txn_32dd03f2-929f-4713-b199-507e194bd575
+time=2026-05-05T10:02:06.148Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_32dd03f2-929f-4713-b199-507e194bd575
+time=2026-05-05T10:14:14.855Z level=INFO msg="processing enrollment" txnID=txn_713aed53-3294-4ea7-bb5d-a2b61448f0ae
+time=2026-05-05T10:14:15.074Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_713aed53-3294-4ea7-bb5d-a2b61448f0ae
+time=2026-05-05T10:16:44.682Z level=INFO msg="processing enrollment" txnID=txn_4e351b2e-8288-40f6-848a-fb6ea6fc1016
+time=2026-05-05T10:16:44.874Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_4e351b2e-8288-40f6-848a-fb6ea6fc1016
+time=2026-05-05T10:18:41.773Z level=INFO msg="processing enrollment" txnID=txn_e336e638-c3a4-4ac9-a6b1-6e61bc00b285
+time=2026-05-05T10:18:42.009Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_e336e638-c3a4-4ac9-a6b1-6e61bc00b285
+time=2026-05-05T10:21:14.866Z level=INFO msg="processing enrollment" txnID=txn_6110dc65-982e-4e44-98f3-14426c22a439
+time=2026-05-05T10:21:15.086Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_6110dc65-982e-4e44-98f3-14426c22a439
+time=2026-05-05T10:23:56.891Z level=INFO msg="processing enrollment" txnID=txn_f75d6d28-72bc-42df-8e5a-ad258211e8bd
+time=2026-05-05T10:23:57.084Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_f75d6d28-72bc-42df-8e5a-ad258211e8bd
+time=2026-05-05T10:26:56.961Z level=INFO msg="processing enrollment" txnID=txn_8802e371-b3bd-46f7-960e-29768bcf7aa9
+time=2026-05-05T10:26:57.143Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_8802e371-b3bd-46f7-960e-29768bcf7aa9
+time=2026-05-05T10:27:23.976Z level=INFO msg="processing enrollment" txnID=txn_c133ed3d-3b18-4a73-8fa7-3028cd5f1a5d
+time=2026-05-05T10:27:24.191Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_c133ed3d-3b18-4a73-8fa7-3028cd5f1a5d
+time=2026-05-05T10:30:06.095Z level=INFO msg="processing enrollment" txnID=txn_bbf29fea-3583-419d-8967-28c3d4d746a0
+time=2026-05-05T10:30:06.316Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_bbf29fea-3583-419d-8967-28c3d4d746a0
+time=2026-05-05T10:35:48.367Z level=INFO msg="processing enrollment" txnID=txn_f2bcf95d-c523-4dce-9677-b5d6552b2595
+time=2026-05-05T10:35:48.585Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_f2bcf95d-c523-4dce-9677-b5d6552b2595
+time=2026-05-05T10:40:09.552Z level=INFO msg="processing enrollment" txnID=txn_b4964351-83ea-48c2-b6a7-87c7c74df367
+time=2026-05-05T10:40:09.770Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_b4964351-83ea-48c2-b6a7-87c7c74df367
+time=2026-05-05T10:41:12.653Z level=INFO msg="processing enrollment" txnID=txn_462f0eae-7c32-4387-a974-6a18a501a084
+time=2026-05-05T10:41:12.873Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_462f0eae-7c32-4387-a974-6a18a501a084
+time=2026-05-05T10:44:12.977Z level=INFO msg="processing enrollment" txnID=txn_0fe8d257-2146-4636-81f7-6496d9ed7842
+time=2026-05-05T10:44:13.200Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_0fe8d257-2146-4636-81f7-6496d9ed7842
+time=2026-05-05T10:47:31.235Z level=INFO msg="processing enrollment" txnID=txn_504a4479-53fc-45b4-bc4d-2a381fe65716
+time=2026-05-05T10:47:31.423Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_504a4479-53fc-45b4-bc4d-2a381fe65716
+time=2026-05-05T10:58:10.968Z level=INFO msg="processing enrollment" txnID=txn_d4d64463-5025-4cf8-8d86-d9ac0c7b71f8
+time=2026-05-05T10:58:11.191Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_d4d64463-5025-4cf8-8d86-d9ac0c7b71f8
+time=2026-05-05T10:58:46.994Z level=INFO msg="processing enrollment" txnID=txn_8e96eab6-6656-4648-8867-3594a3a5bb44
+time=2026-05-05T10:58:47.216Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_8e96eab6-6656-4648-8867-3594a3a5bb44
+time=2026-05-05T11:00:35.103Z level=INFO msg="processing enrollment" txnID=txn_8e492a8d-3929-4751-a833-5c5fbde79efe
+time=2026-05-05T11:00:35.282Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_8e492a8d-3929-4751-a833-5c5fbde79efe
+time=2026-05-05T11:01:20.153Z level=INFO msg="processing enrollment" txnID=txn_4418af17-e1ea-4f4f-ae06-31bf754ece45
+time=2026-05-05T11:01:20.333Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_4418af17-e1ea-4f4f-ae06-31bf754ece45
+time=2026-05-05T11:02:59.272Z level=INFO msg="processing enrollment" txnID=txn_a23ed9b9-1d16-468b-8e83-cc0c854344ac
+time=2026-05-05T11:02:59.709Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_a23ed9b9-1d16-468b-8e83-cc0c854344ac
+time=2026-05-05T11:05:23.203Z level=INFO msg="processing enrollment" txnID=txn_f709d2da-d0f8-440c-b8ec-dee6be21769f
+time=2026-05-05T11:05:23.393Z level=ERROR msg="failed to process enrollment" error="milvus insert failed: field name_embedding does not exist in collection kyc_identities" txnID=txn_f709d2da-d0f8-440c-b8ec-dee6be21769f
+iled" txnID=txn_117b2a46-34dd-4cea-97fa-01dcbc77eb7c
+time=2026-05-05T10:44:21.986Z level=INFO msg="processing verification" txnID=txn_030f165f-5fd9-437a-aad5-56953a342b10
+time=2026-05-05T10:44:22.141Z level=ERROR msg="failed to process verification" error="milvus search failed: checkIfLoaded failed when search, collection:kyc_identities, partitions:[], err = GetCollectionInfo failed, collection = kyc_identities, err = collection 466085275226083335 has not been loaded to memory or load failed" txnID=txn_030f165f-5fd9-437a-aad5-56953a342b10
+time=2026-05-05T10:47:40.284Z level=INFO msg="processing verification" txnID=txn_e603e589-8a4a-46dc-ae4a-aacbc8278f35
+time=2026-05-05T10:47:40.440Z level=ERROR msg="failed to process verification" error="milvus search failed: checkIfLoaded failed when search, collection:kyc_identities, partitions:[], err = GetCollectionInfo failed, collection = kyc_identities, err = collection 466085275226083335 has not been loaded to memory or load failed" txnID=txn_e603e589-8a4a-46dc-ae4a-aacbc8278f35
+time=2026-05-05T10:58:19.970Z level=INFO msg="processing verification" txnID=txn_b1ae6975-1557-40b4-8ee4-653bd85cf8c8
+time=2026-05-05T10:58:20.126Z level=ERROR msg="failed to process verification" error="milvus search failed: checkIfLoaded failed when search, collection:kyc_identities, partitions:[], err = GetCollectionInfo failed, collection = kyc_identities, err = collection 466085275226083335 has not been loaded to memory or load failed" txnID=txn_b1ae6975-1557-40b4-8ee4-653bd85cf8c8
+time=2026-05-05T10:58:55.995Z level=INFO msg="processing verification" txnID=txn_8bce5a6f-dec4-4e98-9bd0-763bd8b3dff7
+time=2026-05-05T10:58:56.150Z level=ERROR msg="failed to process verification" error="milvus search failed: checkIfLoaded failed when search, collection:kyc_identities, partitions:[], err = GetCollectionInfo failed, collection = kyc_identities, err = collection 466085275226083335 has not been loaded to memory or load failed" txnID=txn_8bce5a6f-dec4-4e98-9bd0-763bd8b3dff7
+time=2026-05-05T11:00:44.105Z level=INFO msg="processing verification" txnID=txn_230f2613-f4bf-4b70-bbaa-c860e80339ed
+time=2026-05-05T11:00:44.261Z level=ERROR msg="failed to process verification" error="milvus search failed: checkIfLoaded failed when search, collection:kyc_identities, partitions:[], err = GetCollectionInfo failed, collection = kyc_identities, err = collection 466085275226083335 has not been loaded to memory or load failed" txnID=txn_230f2613-f4bf-4b70-bbaa-c860e80339ed
+time=2026-05-05T11:01:29.154Z level=INFO msg="processing verification" txnID=txn_20d48998-adb3-44f1-be14-15d53efcc7b0
+time=2026-05-05T11:01:29.308Z level=ERROR msg="failed to process verification" error="milvus search failed: checkIfLoaded failed when search, collection:kyc_identities, partitions:[], err = GetCollectionInfo failed, collection = kyc_identities, err = collection 466085275226083335 has not been loaded to memory or load failed" txnID=txn_20d48998-adb3-44f1-be14-15d53efcc7b0
+time=2026-05-05T11:03:08.114Z level=INFO msg="processing verification" txnID=txn_5f63d81a-1627-49aa-a0ea-bb5b01c33c64
+time=2026-05-05T11:03:08.275Z level=ERROR msg="failed to process verification" error="milvus search failed: checkIfLoaded failed when search, collection:kyc_identities, partitions:[], err = GetCollectionInfo failed, collection = kyc_identities, err = collection 466085275226083335 has not been loaded to memory or load failed" txnID=txn_5f63d81a-1627-49aa-a0ea-bb5b01c33c64
+time=2026-05-05T11:05:23.199Z level=INFO msg="processing verification" txnID=txn_da814997-0f37-4cce-999f-d48fe8f81638
+time=2026-05-05T11:05:23.354Z level=ERROR msg="failed to process verification" error="milvus search failed: checkIfLoaded failed when search, collection:kyc_identities, partitions:[], err = GetCollectionInfo failed, collection = kyc_identities, err = collection 466085275226083335 has not been loaded to memory or load failed" txnID=txn_da814997-0f37-4cce-999f-d48fe8f81638

@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	CollectionName = "kyc_identities_v2"
+	CollectionName = "kyc_identities_v7"
 	DimFace        = 512
 	DimName        = 768
 )
@@ -30,7 +30,7 @@ type MilvusClient struct {
 }
 
 func NewMilvusClient(cfg *config.Config, logger *slog.Logger) (Client, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	c, err := client.NewClient(ctx, client.Config{
@@ -47,7 +47,8 @@ func NewMilvusClient(cfg *config.Config, logger *slog.Logger) (Client, error) {
 
 	if err := mc.initCollection(ctx); err != nil {
 		logger.Error("Failed to initialize milvus collection", "error", err)
-		// Return the client anyway so the application can start, maybe milvus is down temporarily
+	} else {
+		logger.Info("Milvus collection initialized and loaded", "collection", CollectionName)
 	}
 
 	return mc, nil
@@ -56,38 +57,43 @@ func NewMilvusClient(cfg *config.Config, logger *slog.Logger) (Client, error) {
 func (m *MilvusClient) initCollection(ctx context.Context) error {
 	has, err := m.client.HasCollection(ctx, CollectionName)
 	if err != nil {
-		return err
-	}
-	if has {
-		return nil
+		return fmt.Errorf("has collection check failed: %w", err)
 	}
 
-	schema := &entity.Schema{
-		CollectionName: CollectionName,
-		Description:    "KYC Identity Records",
-		AutoID:         true,
-		Fields: []*entity.Field{
-			{Name: "id", DataType: entity.FieldTypeInt64, PrimaryKey: true, AutoID: true},
-			{Name: "transaction_id", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "128"}},
-			{Name: "demographic_hash", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "256"}},
-			{Name: "face_embedding", DataType: entity.FieldTypeFloatVector, TypeParams: map[string]string{"dim": fmt.Sprintf("%d", DimFace)}},
-		},
+	if !has {
+		m.logger.Info("Creating collection", "name", CollectionName)
+		schema := &entity.Schema{
+			CollectionName: CollectionName,
+			Description:    "KYC Identity Records",
+			AutoID:         true,
+			Fields: []*entity.Field{
+				{Name: "id", DataType: entity.FieldTypeInt64, PrimaryKey: true, AutoID: true},
+				{Name: "transaction_id", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "128"}},
+				{Name: "demographic_hash", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "256"}},
+				{Name: "face_embedding", DataType: entity.FieldTypeFloatVector, TypeParams: map[string]string{"dim": fmt.Sprintf("%d", DimFace)}},
+			},
+		}
+
+		if err := m.client.CreateCollection(ctx, schema, entity.DefaultShardNumber); err != nil {
+			return fmt.Errorf("create collection failed: %w", err)
+		}
+
+		m.logger.Info("Creating index", "collection", CollectionName)
+		idxFace, err := entity.NewIndexHNSW(entity.L2, 16, 200)
+		if err != nil {
+			return fmt.Errorf("failed to create index entity: %w", err)
+		}
+		if err := m.client.CreateIndex(ctx, CollectionName, "face_embedding", idxFace, false); err != nil {
+			return fmt.Errorf("create index failed: %w", err)
+		}
 	}
 
-	if err := m.client.CreateCollection(ctx, schema, entity.DefaultShardNumber); err != nil {
-		return err
+	m.logger.Info("Loading collection", "name", CollectionName)
+	if err := m.client.LoadCollection(ctx, CollectionName, false); err != nil {
+		return fmt.Errorf("load collection failed: %w", err)
 	}
-
-	// Create indices
-	idxFace, err := entity.NewIndexHNSW(entity.COSINE, 16, 200)
-	if err != nil {
-		return err
-	}
-	if err := m.client.CreateIndex(ctx, CollectionName, "face_embedding", idxFace, false); err != nil {
-		return err
-	}
-
-	return m.client.LoadCollection(ctx, CollectionName, false)
+	
+	return nil
 }
 
 func (m *MilvusClient) InsertIdentity(ctx context.Context, record *domain.IdentityRecord) error {
@@ -101,20 +107,43 @@ func (m *MilvusClient) InsertIdentity(ctx context.Context, record *domain.Identi
 
 	_, err := m.client.Insert(ctx, CollectionName, "", idCol, hashCol, faceCol)
 	if err != nil {
-		return err
+		return fmt.Errorf("insert failed: %w", err)
 	}
 	
 	// Flush to ensure it's searchable
-	return m.client.Flush(ctx, CollectionName, false)
+	if err := m.client.Flush(ctx, CollectionName, false); err != nil {
+		return fmt.Errorf("flush failed: %w", err)
+	}
+	
+	return nil
 }
 
 func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float32, nameEmbedding []float32, topK int) ([]*domain.IdentityRecord, error) {
-	// For simplicity in the hackathon, we'll do a vector search on the face_embedding first,
-	// then we can refine or just retrieve the corresponding name_embedding and hash.
 	sp, _ := entity.NewIndexHNSWSearchParam(74)
 	
-	searchResult, err := m.client.Search(ctx, CollectionName, []string{}, "", []string{"transaction_id", "demographic_hash"}, 
-		[]entity.Vector{entity.FloatVector(faceEmbedding)}, "face_embedding", entity.COSINE, topK, sp)
+	var searchResult []client.SearchResult
+	var err error
+
+	// Retry once if not loaded
+	for i := 0; i < 2; i++ {
+		searchResult, err = m.client.Search(ctx, CollectionName, []string{}, "", []string{"transaction_id", "demographic_hash"}, 
+			[]entity.Vector{entity.FloatVector(faceEmbedding)}, "face_embedding", entity.L2, topK, sp)
+		
+		if err == nil {
+			break
+		}
+
+		if i == 0 {
+			m.logger.Warn("Milvus search failed, attempting to reload collection", "error", err)
+			_ = m.client.LoadCollection(ctx, CollectionName, true)
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+	}
+		
+	if err != nil {
+		return nil, err
+	}
 		
 	if err != nil {
 		return nil, err

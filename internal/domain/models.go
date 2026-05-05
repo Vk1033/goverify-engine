@@ -27,6 +27,7 @@ const (
 	StatusPartial   TransactionStatus = "PARTIAL_MATCH"
 	StatusNoMatch   TransactionStatus = "NO_MATCH"
 	StatusError     TransactionStatus = "ERROR"
+	StatusSuccess   TransactionStatus = "SUCCESS"
 )
 
 // AsyncResponse is the immediate response given to the client
