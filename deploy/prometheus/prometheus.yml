@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: 'kyc-api'
+    static_configs:
+      - targets: ['kyc-api:8080']
+
+  - job_name: 'kyc-worker'
+    static_configs:
+      - targets: ['kyc-worker:9090']
+
+  - job_name: 'milvus'
+    static_configs:
+      - targets: ['milvus-standalone:19530']

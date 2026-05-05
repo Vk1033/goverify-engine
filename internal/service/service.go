@@ -53,7 +53,7 @@ func (s *serviceImpl) ProcessEnrollment(ctx context.Context, txnID string, req d
 	defer span.End()
 	span.SetAttributes(attribute.String("txn_id", txnID), attribute.String("user_name", req.Name))
 
-	s.logger.Info("processing enrollment", "txnID", txnID)
+	s.logger.InfoContext(ctx, "processing enrollment", "txnID", txnID)
 
 	faceEmb, err := s.embeddings.GenerateFaceEmbedding(req.PhotoBase64)
 	if err != nil {
@@ -86,7 +86,7 @@ func (s *serviceImpl) ProcessEnrollment(ctx context.Context, txnID string, req d
 		return fmt.Errorf("milvus insert failed: %w", err)
 	}
 
-	s.logger.Info("enrollment successful", "txnID", txnID)
+	s.logger.InfoContext(ctx, "enrollment successful", "txnID", txnID)
 	return nil
 }
 
@@ -95,7 +95,7 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 	defer span.End()
 	span.SetAttributes(attribute.String("txn_id", txnID), attribute.String("user_name", req.Name))
 
-	s.logger.Info("processing verification", "txnID", txnID)
+	s.logger.InfoContext(ctx, "processing verification", "txnID", txnID)
 
 	faceEmb, err := s.embeddings.GenerateFaceEmbedding(req.PhotoBase64)
 	if err != nil {
@@ -189,7 +189,7 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 		},
 		CreatedAt: time.Now(),
 	}
-	s.logger.Info("verification completed", "txnID", txnID, "status", res.Status, "final_score", finalScore)
+	s.logger.InfoContext(ctx, "verification completed", "txnID", txnID, "status", res.Status, "final_score", finalScore)
 	return res, nil
 }
 
@@ -198,6 +198,6 @@ func (s *serviceImpl) SearchIdentities(ctx context.Context, name string, gender 
 	defer span.End()
 	span.SetAttributes(attribute.String("name", name), attribute.String("gender", gender))
 
-	s.logger.Info("searching identities", "name", name, "gender", gender)
+	s.logger.InfoContext(ctx, "searching identities", "name", name, "gender", gender)
 	return s.milvus.QueryIdentities(ctx, name, gender)
 }
