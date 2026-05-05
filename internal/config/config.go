@@ -13,6 +13,13 @@ type Config struct {
 	Milvus      MilvusConfig
 	Redis       RedisConfig
 	JWT         JWTConfig
+	AI          AIConfig
+}
+
+type AIConfig struct {
+	FaceModelPath   string `mapstructure:"AI_FACE_MODEL_PATH"`
+	NameModelPath   string `mapstructure:"AI_NAME_MODEL_PATH"`
+	LibraryPath     string `mapstructure:"AI_LIBRARY_PATH"`
 }
 
 type KafkaConfig struct {
@@ -44,6 +51,9 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("MILVUS_ADDRESS", "localhost:19530")
 	viper.SetDefault("REDIS_ADDRESS", "localhost:6379")
 	viper.SetDefault("JWT_SECRET", "super-secret-key-for-hackathon")
+	viper.SetDefault("AI_FACE_MODEL_PATH", "/app/models/face.onnx")
+	viper.SetDefault("AI_NAME_MODEL_PATH", "/app/models/name.onnx")
+	viper.SetDefault("AI_LIBRARY_PATH", "/usr/local/lib/libonnxruntime.so")
 
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
@@ -59,6 +69,10 @@ func LoadConfig() (*Config, error) {
 	cfg.Milvus.Address = viper.GetString("MILVUS_ADDRESS")
 	cfg.Redis.Address = viper.GetString("REDIS_ADDRESS")
 	cfg.JWT.Secret = viper.GetString("JWT_SECRET")
+
+	cfg.AI.FaceModelPath = viper.GetString("AI_FACE_MODEL_PATH")
+	cfg.AI.NameModelPath = viper.GetString("AI_NAME_MODEL_PATH")
+	cfg.AI.LibraryPath = viper.GetString("AI_LIBRARY_PATH")
 
 	return &cfg, nil
 }

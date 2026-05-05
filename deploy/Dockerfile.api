@@ -1,14 +1,39 @@
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26-bookworm AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y wget unzip
 
 WORKDIR /app
+
+# Download ONNX Runtime shared library
+ENV ONNX_VERSION=1.20.1
+RUN wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-${ONNX_VERSION}.tgz && \
+    tar -xzf onnxruntime-linux-x64-${ONNX_VERSION}.tgz && \
+    cp onnxruntime-linux-x64-${ONNX_VERSION}/lib/libonnxruntime.so.${ONNX_VERSION} /usr/local/lib/libonnxruntime.so && \
+    ldconfig
+
+# Download Models
+RUN apt-get install -y curl && \
+    mkdir -p /app/models && \
+    curl -L -o /app/models/face.onnx https://media.githubusercontent.com/media/onnx/models/main/validated/vision/body_analysis/mobilefacenet/model/mobilefacenet.onnx || \
+    touch /app/models/face.onnx && \
+    touch /app/models/name.onnx 
+
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /kyc-api cmd/kyc-api/main.go
+# We need CGO_ENABLED=1 for onnxruntime
+RUN CGO_ENABLED=1 GOOS=linux go build -o /kyc-api cmd/kyc-api/main.go
 
-FROM alpine:3.18
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY --from=builder /kyc-api /kyc-api
+COPY --from=builder /usr/local/lib/libonnxruntime.so /usr/local/lib/libonnxruntime.so
+COPY --from=builder /app/models /app/models
+
+ENV LD_LIBRARY_PATH=/usr/local/lib
 EXPOSE 8080
 ENTRYPOINT ["/kyc-api"]

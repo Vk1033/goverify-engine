@@ -46,7 +46,9 @@ var rootCmd = &cobra.Command{
 				config.LoadConfig,
 				logger.NewLogger,
 				api.NewRedisClient,
-				embedding.NewMockService,
+				func(cfg *config.Config) (embedding.Service, error) {
+					return embedding.NewRealService(cfg)
+				},
 				vectordb.NewMilvusClient,
 				kafka.NewConsumers,
 				service.NewKYCService,
@@ -64,6 +66,16 @@ var rootCmd = &cobra.Command{
 				lc.Append(fx.Hook{
 					OnStop: func(ctx context.Context) error {
 						shutdown()
+						return nil
+					},
+				})
+			}),
+			fx.Invoke(func(lc fx.Lifecycle, embed embedding.Service) {
+				lc.Append(fx.Hook{
+					OnStop: func(ctx context.Context) error {
+						if realSvc, ok := embed.(interface{ Close() error }); ok {
+							return realSvc.Close()
+						}
 						return nil
 					},
 				})
