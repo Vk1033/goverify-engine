@@ -1,28 +1,41 @@
-FROM golang:1.26-bookworm AS builder
+# --- Stage 1: Download Dependencies ---
+FROM golang:1.26-bookworm AS deps
+WORKDIR /app
 
+# Install ONNX Runtime
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 RUN curl -L -o onnxruntime.tgz https://github.com/microsoft/onnxruntime/releases/download/v1.25.1/onnxruntime-linux-x64-1.25.1.tgz && \
     tar -xzf onnxruntime.tgz && \
     cp onnxruntime-linux-x64-1.25.1/lib/libonnxruntime.so.1.25.1 /usr/lib/libonnxruntime.so && \
     rm -rf onnxruntime.tgz onnxruntime-linux-x64-1.25.1
 
+# Download Model separately to cache it
+RUN mkdir -p /models && \
+    curl -L -o /models/mobilefacenet.onnx https://media.githubusercontent.com/media/onnx/models/main/validated/vision/body_analysis/arcface/model/arcfaceresnet100-8.onnx
+
+# --- Stage 2: Builder ---
+FROM deps AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=1 GOOS=linux go build -o /kyc-worker cmd/kyc-worker/main.go
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o /kyc-worker cmd/kyc-worker/main.go
 
+# --- Stage 3: Final Image ---
 FROM debian:bookworm-slim
 WORKDIR /app
+
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
+# Copy binary and runtime dependencies
 COPY --from=builder /kyc-worker /kyc-worker
 COPY --from=builder /usr/lib/libonnxruntime.so /usr/lib/libonnxruntime.so
+COPY --from=builder /models/mobilefacenet.onnx /models/mobilefacenet.onnx
 
-RUN mkdir -p /models
-COPY test_model.onnx /models/mobilefacenet.onnx
-
+# Environment variables for ONNX
 ENV ONNX_LIB_PATH=/usr/lib/libonnxruntime.so
 ENV ONNX_MODEL_PATH=/models/mobilefacenet.onnx
 
+EXPOSE 9090
 ENTRYPOINT ["/kyc-worker"]

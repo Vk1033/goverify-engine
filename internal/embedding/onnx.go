@@ -1,3 +1,5 @@
+//go:build !noonnx
+
 package embedding
 
 import (

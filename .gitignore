@@ -8,6 +8,10 @@
 *.so
 *.dylib
 
+# Models
+*.onnx
+/models/
+
 # Test binary, built with `go test -c`
 *.test
 
@@ -32,4 +36,3 @@ go.work.sum
 .vscode/
 
 *.log
-test_model.onnx

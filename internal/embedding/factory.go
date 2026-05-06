@@ -1,34 +1,25 @@
 package embedding
 
-import (
-	"os"
+import "math"
 
-	"github.com/rs/zerolog"
-	"github.com/yalue/onnxruntime_go"
-)
+// Service defines the interface for generating embeddings.
+type Service interface {
+	GenerateFaceEmbedding(photoBase64 string) ([]float32, error)
+	GenerateNameEmbedding(name string) ([]float32, error)
+}
 
-func ProvideService(logger *zerolog.Logger) (Service, error) {
-	modelPath := os.Getenv("ONNX_MODEL_PATH")
-	libPath := os.Getenv("ONNX_LIB_PATH")
-
-	if modelPath == "" || libPath == "" {
-		logger.Warn().Msg("ONNX_MODEL_PATH or ONNX_LIB_PATH not set, falling back to MockService")
-		return NewMockService(), nil
+// normalize normalizes the vector to unit length for cosine similarity
+func normalize(v []float32) []float32 {
+	var sum float32
+	for _, val := range v {
+		sum += val * val
 	}
-
-	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
-		logger.Warn().Str("path", modelPath).Msg("ONNX model file not found, falling back to MockService")
-		return NewMockService(), nil
+	norm := float32(math.Sqrt(float64(sum)))
+	if norm == 0 {
+		return v
 	}
-
-	onnxruntime_go.SetSharedLibraryPath(libPath)
-	
-	svc, err := NewONNXService(modelPath)
-	if err != nil {
-		logger.Error().Err(err).Msg("Failed to initialize ONNX service, falling back to MockService")
-		return NewMockService(), nil
+	for i := range v {
+		v[i] /= norm
 	}
-
-	logger.Info().Str("model", modelPath).Msg("Initialized real ONNX embedding service")
-	return svc, nil
+	return v
 }
