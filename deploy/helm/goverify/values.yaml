@@ -28,6 +28,8 @@ worker:
     KAFKA_BROKERS: kafka:9092
     MILVUS_ADDRESS: milvus:19530
     REDIS_ADDRESS: redis:6379
+    ONNX_MODEL_PATH: "/models/mobilefacenet.onnx"
+    ONNX_LIB_PATH: "/usr/lib/libonnxruntime.so"
 
 # Dependency configuration (placeholders for subcharts or external services)
 kafka:

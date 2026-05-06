@@ -26,3 +26,19 @@ spec:
               value: {{ .Values.worker.env.MILVUS_ADDRESS }}
             - name: REDIS_ADDRESS
               value: {{ .Values.worker.env.REDIS_ADDRESS }}
+            - name: ONNX_MODEL_PATH
+              value: {{ .Values.worker.env.ONNX_MODEL_PATH | quote }}
+            - name: ONNX_LIB_PATH
+              value: {{ .Values.worker.env.ONNX_LIB_PATH | quote }}
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 9090
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 9090
+            initialDelaySeconds: 30
+            periodSeconds: 20

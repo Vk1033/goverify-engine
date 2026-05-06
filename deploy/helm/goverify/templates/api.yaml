@@ -30,6 +30,18 @@ spec:
               value: {{ .Values.api.env.MILVUS_ADDRESS }}
             - name: REDIS_ADDRESS
               value: {{ .Values.api.env.REDIS_ADDRESS }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.api.env.PORT }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.api.env.PORT }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
 ---
 apiVersion: v1
 kind: Service
