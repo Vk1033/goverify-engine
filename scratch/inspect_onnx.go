@@ -14,18 +14,26 @@ func main() {
 	}
 	defer onnxruntime_go.DestroyEnvironment()
 
-	session, err := onnxruntime_go.NewAdvancedSession("models/face.onnx", nil, nil, nil)
+	inspect("models/facenet512.onnx")
+	inspect("models/retinaface.onnx")
+}
+
+func inspect(path string) {
+	fmt.Printf("=== %s ===\n", path)
+	session, err := onnxruntime_go.NewAdvancedSession(path, nil, nil, nil)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Error: %v\n", err)
+		return
 	}
 	defer session.Destroy()
 
 	fmt.Println("Inputs:")
 	for _, input := range session.GetInputNames() {
-		fmt.Println(input)
+		fmt.Println(" ", input)
 	}
 	fmt.Println("Outputs:")
 	for _, output := range session.GetOutputNames() {
-		fmt.Println(output)
+		fmt.Println(" ", output)
 	}
+	fmt.Println()
 }
