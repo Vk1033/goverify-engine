@@ -46,7 +46,7 @@ var rootCmd = &cobra.Command{
 				config.LoadConfig,
 				logger.NewLogger,
 				api.NewRedisClient,
-				embedding.NewMockService,
+				embedding.ProvideService,
 				vectordb.NewMilvusClient,
 				kafka.NewConsumers,
 				service.NewKYCService,

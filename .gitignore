@@ -32,3 +32,4 @@ go.work.sum
 .vscode/
 
 *.log
+test_model.onnx
