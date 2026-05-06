@@ -3,6 +3,7 @@
 package embedding
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -14,23 +15,20 @@ func ProvideService(logger *zerolog.Logger) (Service, error) {
 	libPath := os.Getenv("ONNX_LIB_PATH")
 
 	if modelPath == "" || libPath == "" {
-		logger.Warn().Msg("ONNX_MODEL_PATH or ONNX_LIB_PATH not set, falling back to MockService")
-		return NewMockService(), nil
+		return nil, fmt.Errorf("ONNX_MODEL_PATH or ONNX_LIB_PATH not set - AI service cannot start")
 	}
 
 	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
-		logger.Warn().Str("path", modelPath).Msg("ONNX model file not found, falling back to MockService")
-		return NewMockService(), nil
+		return nil, fmt.Errorf("ONNX model file not found at %s", modelPath)
 	}
 
 	onnxruntime_go.SetSharedLibraryPath(libPath)
 	
 	svc, err := NewONNXService(modelPath)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed to initialize ONNX service, falling back to MockService")
-		return NewMockService(), nil
+		return nil, fmt.Errorf("failed to initialize real ONNX service: %w", err)
 	}
 
-	logger.Info().Str("model", modelPath).Msg("Initialized real ONNX embedding service")
+	logger.Info().Str("model", modelPath).Msg("Initialized production ONNX embedding service")
 	return svc, nil
 }

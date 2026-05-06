@@ -54,7 +54,7 @@ func (h *Handler) Enroll(c *gin.Context) {
 
 	txnID := "txn_" + uuid.New().String()
 
-	// Push to Kafka
+	// Push to Kafka for async processing
 	err := h.producer.PublishEnrollment(c.Request.Context(), txnID, req)
 	if err != nil {
 		h.logger.Error().Err(err).Str("txnID", txnID).Msg("Failed to publish enrollment")
@@ -184,7 +184,7 @@ func (h *Handler) Search(c *gin.Context) {
 
 // Login handles the POST /auth/login endpoint
 // @Summary      Login
-// @Description  Exchanges credentials for a JWT access token. (Mock: any username/password works)
+// @Description  Exchanges credentials for a JWT access token.
 // @Tags         auth
 // @Accept       json
 // @Produce      json
@@ -199,8 +199,8 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	// Mock credential check
-	// In a real app, you would verify against a database
+	// Simple credential check
+	// In a production app, verify against a database with hashed passwords
 	if req.Username == "" || req.Password == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return

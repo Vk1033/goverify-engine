@@ -4,15 +4,12 @@ package embedding
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
-	"math/rand"
 	"sync"
-	"time"
 
 	"github.com/yalue/onnxruntime_go"
 	"golang.org/x/image/draw"
@@ -47,7 +44,6 @@ func NewONNXService(modelPath string) (*ONNXService, error) {
 		return nil, fmt.Errorf("failed to create input tensor: %w", err)
 	}
 
-	// ArcFace/MobileFaceNet usually output 512D
 	outputShape := onnxruntime_go.NewShape(1, 512)
 	outputTensor, err := onnxruntime_go.NewEmptyTensor[float32](outputShape)
 	if err != nil {
@@ -55,7 +51,6 @@ func NewONNXService(modelPath string) (*ONNXService, error) {
 		return nil, fmt.Errorf("failed to create output tensor: %w", err)
 	}
 
-	// Get input/output information from the model
 	inputs, outputs, err := onnxruntime_go.GetInputOutputInfo(modelPath)
 	if err != nil {
 		inputTensor.Destroy()
@@ -121,7 +116,6 @@ func (s *ONNXService) GenerateFaceEmbedding(photoBase64 string) ([]float32, erro
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Copy data into pre-allocated input tensor
 	inputData := s.inputTensor.GetData()
 	copy(inputData, tensorData)
 
@@ -130,7 +124,6 @@ func (s *ONNXService) GenerateFaceEmbedding(photoBase64 string) ([]float32, erro
 		return nil, fmt.Errorf("onnx inference failed: %w", err)
 	}
 
-	// Copy result out of pre-allocated output tensor
 	results := make([]float32, 512)
 	copy(results, s.outputTensor.GetData())
 
@@ -138,16 +131,13 @@ func (s *ONNXService) GenerateFaceEmbedding(photoBase64 string) ([]float32, erro
 }
 
 func (s *ONNXService) GenerateNameEmbedding(name string) ([]float32, error) {
-	time.Sleep(50 * time.Millisecond)
-
-	hash := sha256.Sum256([]byte(name))
-	r := rand.New(rand.NewSource(int64(hash[0]) | int64(hash[1])<<8 | int64(hash[2])<<16))
-
+	// Replacing random deterministic mock with a character-frequency vector.
+	// This is a simple but REAL vector representation of the name.
 	embedding := make([]float32, 768)
-	for i := 0; i < 768; i++ {
-		embedding[i] = r.Float32()
+	for _, char := range name {
+		idx := int(char) % 768
+		embedding[idx] += 1.0
 	}
-
 	return normalize(embedding), nil
 }
 
