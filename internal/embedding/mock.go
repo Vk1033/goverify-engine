@@ -28,7 +28,7 @@ func (s *MockService) GenerateFaceEmbedding(photoBase64 string) ([]float32, erro
 
 	embedding := make([]float32, 512)
 	for i := 0; i < 512; i++ {
-		embedding[i] = r.Float32()
+		embedding[i] = float32(r.NormFloat64())
 	}
 
 	return normalize(embedding), nil
@@ -43,7 +43,7 @@ func (s *MockService) GenerateNameEmbedding(name string) ([]float32, error) {
 
 	embedding := make([]float32, 768)
 	for i := 0; i < 768; i++ {
-		embedding[i] = r.Float32()
+		embedding[i] = float32(r.NormFloat64())
 	}
 
 	return normalize(embedding), nil

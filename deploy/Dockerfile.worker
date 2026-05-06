@@ -5,18 +5,14 @@ RUN apt-get update && apt-get install -y wget unzip
 WORKDIR /app
 
 # Download ONNX Runtime shared library
-ENV ONNX_VERSION=1.20.1
+ENV ONNX_VERSION=1.21.0
 RUN wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-${ONNX_VERSION}.tgz && \
     tar -xzf onnxruntime-linux-x64-${ONNX_VERSION}.tgz && \
     cp onnxruntime-linux-x64-${ONNX_VERSION}/lib/libonnxruntime.so.${ONNX_VERSION} /usr/local/lib/libonnxruntime.so && \
     ldconfig
 
-# Download Models
-RUN apt-get install -y curl && \
-    mkdir -p /app/models && \
-    curl -L -o /app/models/face.onnx https://media.githubusercontent.com/media/onnx/models/main/validated/vision/body_analysis/mobilefacenet/model/mobilefacenet.onnx || \
-    touch /app/models/face.onnx && \
-    touch /app/models/name.onnx
+# Copy Models from host
+COPY models/ /app/models/
 
 COPY go.mod go.sum ./
 RUN go mod download

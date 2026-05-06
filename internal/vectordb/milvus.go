@@ -3,6 +3,7 @@ package vectordb
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -14,7 +15,7 @@ import (
 )
 
 const (
-	CollectionName = "kyc_identities_v9"
+	CollectionName = "kyc_identities_v10"
 	DimFace        = 512
 	DimName        = 768
 	DimCombined    = DimFace + DimName
@@ -108,8 +109,25 @@ func (m *MilvusClient) InsertIdentity(ctx context.Context, record *domain.Identi
 	names := []string{record.Name}
 	dobs := []string{record.DOB}
 	genders := []string{record.Gender}
-	combined := append([]float32{}, record.FaceEmbedding...)
-	combined = append(combined, record.NameEmbedding...)
+	// Scale embeddings by their square root of weights to maintain weighted similarity in L2 space
+	// Face: 0.5, Name: 0.3. Total combined weight: 0.8
+	const (
+		wFace = 0.5
+		wName = 0.3
+	)
+	
+	scaledFace := make([]float32, len(record.FaceEmbedding))
+	for i, v := range record.FaceEmbedding {
+		scaledFace[i] = v * float32(math.Sqrt(wFace))
+	}
+	
+	scaledName := make([]float32, len(record.NameEmbedding))
+	for i, v := range record.NameEmbedding {
+		scaledName[i] = v * float32(math.Sqrt(wName))
+	}
+
+	combined := append([]float32{}, scaledFace...)
+	combined = append(combined, scaledName...)
 
 	signatures := [][]float32{combined}
 
@@ -140,8 +158,24 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 	var err error
 
 	// Retry once if not loaded
-	combined := append([]float32{}, faceEmbedding...)
-	combined = append(combined, nameEmbedding...)
+	// Scale query embeddings same as insertion
+	const (
+		wFace = 0.5
+		wName = 0.3
+	)
+
+	scaledFace := make([]float32, len(faceEmbedding))
+	for i, v := range faceEmbedding {
+		scaledFace[i] = v * float32(math.Sqrt(wFace))
+	}
+	
+	scaledName := make([]float32, len(nameEmbedding))
+	for i, v := range nameEmbedding {
+		scaledName[i] = v * float32(math.Sqrt(wName))
+	}
+
+	combined := append([]float32{}, scaledFace...)
+	combined = append(combined, scaledName...)
 
 	// Retry once if not loaded
 	for i := 0; i < 2; i++ {

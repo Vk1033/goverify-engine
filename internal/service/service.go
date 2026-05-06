@@ -32,8 +32,8 @@ const (
 	WeightDemographic = 0.20 // 20% Demographic Hash Match
 
 	// Thresholds
-	ThresholdMatch   = 0.85
-	ThresholdPartial = 0.70
+	ThresholdMatch   = 0.65
+	ThresholdPartial = 0.50
 )
 
 type serviceImpl struct {
@@ -148,22 +148,10 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 		bestMatch = results[0] // fallback to highest face similarity if demographic doesn't match
 	}
 
-	// Calculate similarities from L2 distance (Milvus returns L2 squared for some indexes, or just L2)
-	// For HNSW with L2 on normalized vectors: dist = 2*(1-cos)
-	// So cos = 1 - (dist/2)
-	faceSimilarity := 1.0 - (float64(bestMatch.Score) / 2.0)
-	if faceSimilarity < 0 {
-		faceSimilarity = 0
-	}
-
-	// Since we are using a combined vector for search, the 'Score' is the combined distance.
-	// However, for "Explainable" scoring, we want to show individual contributions.
-	// In a real system, we'd perform separate searches or rerank. 
-	// For this hackathon, we'll treat the search result score as the primary face similarity
-	// and assume name similarity is roughly the same for the top match (or slightly lower).
-	nameSimilarity := faceSimilarity * 0.95 // heuristic for mock
-	if !bestDemographicMatch {
-		nameSimilarity = faceSimilarity * 0.5 // penalize if demographic doesn't match
+	// Calculate similarities from L2 distance (Milvus returns L2 squared)
+	combinedBiometricScore := 0.8 - (float64(bestMatch.Score) / 2.0)
+	if combinedBiometricScore < 0 {
+		combinedBiometricScore = 0
 	}
 
 	// Calculate Weighted Score
@@ -172,7 +160,20 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 		demoScore = 1.0
 	}
 
-	finalScore := (faceSimilarity * WeightFace) + (nameSimilarity * WeightName) + (demoScore * WeightDemographic)
+	finalScore := combinedBiometricScore + (demoScore * WeightDemographic)
+
+	// For explainability, we split the combined score proportionally if we don't have separate vectors.
+	faceSimilarity := combinedBiometricScore / 0.8
+	nameSimilarity := faceSimilarity
+
+	s.logger.Info().
+		Float32("raw_milvus_score", bestMatch.Score).
+		Float64("combined_biometric", combinedBiometricScore).
+		Float64("demo_score", demoScore).
+		Float64("final_score", finalScore).
+		Bool("demo_match", bestDemographicMatch).
+		Str("txnID", txnID).
+		Msg("Score breakdown")
 
 	status := domain.StatusNoMatch
 	if finalScore >= ThresholdMatch {
