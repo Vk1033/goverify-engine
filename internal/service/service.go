@@ -183,9 +183,9 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 	}
 
 	// Calculate similarities from L2 distance
-	// For L2 distance on normalized vectors: dist = sqrt(2 - 2*cos_sim)
-	// Simple linear mapping for now: 1.0 - (dist / 2.0)
-	faceSimilarity := 1.0 - (float64(bestMatch.Score) / 2.0)
+	// For L2 distance on normalized vectors: dist^2 = 2 - 2*cos_sim => cos_sim = 1 - (dist^2 / 2)
+	dist := float64(bestMatch.Score)
+	faceSimilarity := 1.0 - (dist * dist / 2.0)
 	if faceSimilarity < 0 {
 		faceSimilarity = 0
 	}
@@ -199,6 +199,11 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 	}
 
 	finalScore := (faceSimilarity * WeightFace) + (nameSimilarity * WeightName) + (demoScore * WeightDemographic)
+
+	// Biometric Safety Threshold: If face similarity is extremely low, it's a mismatch regardless of other data.
+	if faceSimilarity < 0.4 {
+		finalScore *= 0.5 // Heavy penalty for poor biometric match
+	}
 
 	status := domain.StatusNoMatch
 	if finalScore >= ThresholdMatch {
@@ -261,7 +266,7 @@ func (s *serviceImpl) SearchIdentities(ctx context.Context, name string, gender 
 	return results, nil
 }
 
-// calculateStringSimilarity returns a value between 0 and 1 representing the similarity between two strings.
+// calculateStringSimilarity returns a value between 0 and 1 using Levenshtein Distance.
 func calculateStringSimilarity(s1, s2 string) float64 {
 	s1 = strings.ToLower(strings.TrimSpace(s1))
 	s2 = strings.ToLower(strings.TrimSpace(s2))
@@ -272,25 +277,41 @@ func calculateStringSimilarity(s1, s2 string) float64 {
 		return 0.0
 	}
 
-	// Simple Jaccard similarity of characters
-	m1 := make(map[rune]int)
-	m2 := make(map[rune]int)
-	for _, r := range s1 { m1[r]++ }
-	for _, r := range s2 { m2[r]++ }
+	// Levenshtein Distance
+	d := make([][]int, len(s1)+1)
+	for i := range d {
+		d[i] = make([]int, len(s2)+1)
+		d[i][0] = i
+	}
+	for j := range d[0] {
+		d[0][j] = j
+	}
 
-	intersection := 0
-	union := len(s1) + len(s2)
-
-	for r, c1 := range m1 {
-		if c2, ok := m2[r]; ok {
-			if c1 < c2 {
-				intersection += c1
-			} else {
-				intersection += c2
+	for i := 1; i <= len(s1); i++ {
+		for j := 1; j <= len(s2); j++ {
+			cost := 1
+			if s1[i-1] == s2[j-1] {
+				cost = 0
 			}
+			d[i][j] = min3(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+cost)
 		}
 	}
 
-	if union == 0 { return 0 }
-	return 2.0 * float64(intersection) / float64(union)
+	dist := d[len(s1)][len(s2)]
+	maxLen := len(s1)
+	if len(s2) > maxLen {
+		maxLen = len(s2)
+	}
+
+	return 1.0 - float64(dist)/float64(maxLen)
+}
+
+func min3(a, b, c int) int {
+	if a < b && a < c {
+		return a
+	}
+	if b < c {
+		return b
+	}
+	return c
 }
