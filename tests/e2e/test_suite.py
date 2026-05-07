@@ -18,37 +18,45 @@ CALLBACK_URL = f"http://host.docker.internal:{CALLBACK_PORT}/callback"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGE_DIR = os.path.join(SCRIPT_DIR, "../../testdata/images")
 
+
 def get_image_path(filename):
     return os.path.join(IMAGE_DIR, filename)
 
+
 class CallbackHandler(BaseHTTPRequestHandler):
     def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
+        content_length = int(self.headers["Content-Length"])
         post_data = self.rfile.read(content_length)
         try:
-            data = json.loads(post_data.decode('utf-8'))
+            data = json.loads(post_data.decode("utf-8"))
             self.server.received_callbacks.append(data)
             # print(f"\n[DEBUG] Callback received for txn: {data.get('transaction_id')}")
         except Exception as e:
             print(f"Error parsing callback: {e}")
-        
+
         self.send_response(200)
         self.end_headers()
 
     def log_message(self, format, *args):
-        pass # Quiet logs
+        pass  # Quiet logs
+
 
 class CallbackServer(HTTPServer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.received_callbacks = []
 
+
 class KYCTester:
     def __init__(self):
         self.token = ""
         try:
-            self.callback_server = CallbackServer(('0.0.0.0', CALLBACK_PORT), CallbackHandler)
-            self.server_thread = threading.Thread(target=self.callback_server.serve_forever, daemon=True)
+            self.callback_server = CallbackServer(
+                ("0.0.0.0", CALLBACK_PORT), CallbackHandler
+            )
+            self.server_thread = threading.Thread(
+                target=self.callback_server.serve_forever, daemon=True
+            )
             self.server_thread.start()
             print(f"[*] Callback listener started on port {CALLBACK_PORT}")
             print(f"[*] Callback URL configured as: {CALLBACK_URL}")
@@ -58,28 +66,35 @@ class KYCTester:
 
     def login(self, username="admin", password="password123"):
         print(f"[*] Logging in as {username}...")
-        resp = requests.post(f"{API_URL}/auth/login", json={"username": username, "password": password})
+        resp = requests.post(
+            f"{API_URL}/auth/login", json={"username": username, "password": password}
+        )
         if resp.status_code == 200:
             self.token = resp.json()["access_token"]
             return True
         return False
 
     def get_headers(self):
-        return {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
+        return {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json",
+        }
 
     def enroll(self, image_path, name, dob, gender):
         print(f"[*] Enrolling {name} ({image_path})...")
         with open(image_path, "rb") as f:
             img_base64 = base64.b64encode(f.read()).decode("utf-8")
-        
+
         payload = {
             "photo_base64": img_base64,
             "name": name,
             "dob": dob,
             "gender": gender,
-            "callback_url": CALLBACK_URL
+            "callback_url": CALLBACK_URL,
         }
-        resp = requests.post(f"{API_URL}/kyc/enroll", json=payload, headers=self.get_headers())
+        resp = requests.post(
+            f"{API_URL}/kyc/enroll", json=payload, headers=self.get_headers()
+        )
         resp.raise_for_status()
         return resp.json()["transaction_id"]
 
@@ -87,15 +102,17 @@ class KYCTester:
         print(f"[*] Verifying {name} ({image_path})...")
         with open(image_path, "rb") as f:
             img_base64 = base64.b64encode(f.read()).decode("utf-8")
-        
+
         payload = {
             "photo_base64": img_base64,
             "name": name,
             "dob": dob,
             "gender": gender,
-            "callback_url": CALLBACK_URL
+            "callback_url": CALLBACK_URL,
         }
-        resp = requests.post(f"{API_URL}/kyc/verify", json=payload, headers=self.get_headers())
+        resp = requests.post(
+            f"{API_URL}/kyc/verify", json=payload, headers=self.get_headers()
+        )
         resp.raise_for_status()
         return resp.json()["transaction_id"]
 
@@ -114,19 +131,22 @@ class KYCTester:
             params["name"] = name
         if gender:
             params["gender"] = gender
-        resp = requests.get(f"{API_URL}/kyc/search", headers=self.get_headers(), params=params)
+        resp = requests.get(
+            f"{API_URL}/kyc/search", headers=self.get_headers(), params=params
+        )
         return resp.json()
+
 
 def run_suite():
     tester = KYCTester()
-    
+
     if not tester.login():
         print("[!] Login failed. Is the API running?")
         return
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("PHASE 1: ENROLLMENT")
-    print("="*50)
+    print("=" * 50)
 
     # Enroll Person 1
     p1_txn = tester.enroll(get_image_path("p1a.png"), "John Doe", "1990-01-01", "MALE")
@@ -137,55 +157,75 @@ def run_suite():
         print("  [!] Timeout waiting for Person 1 enrollment callback")
 
     # Enroll Person 3
-    p3_txn = tester.enroll(get_image_path("p3a.jpg"), "Alice Smith", "1985-05-20", "FEMALE")
+    p3_txn = tester.enroll(
+        get_image_path("p4a.png"), "Alice Smith", "1985-05-20", "FEMALE"
+    )
     cb3 = tester.wait_for_callback(p3_txn)
     if cb3:
         print(f"  [+] Person 3 enrolled. Status: {cb3['status']}")
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("PHASE 2: VERIFICATION (MATCH)")
-    print("="*50)
+    print("=" * 50)
 
     # Match Person 1 (p1a vs p1b)
     v1_txn = tester.verify(get_image_path("p1b.png"), "John Doe", "1990-01-01", "MALE")
     v_cb1 = tester.wait_for_callback(v1_txn)
     if v_cb1:
-        print(f"  [+] P1 Match Result: {v_cb1['status']} (Score: {v_cb1['confidence_score']:.4f})")
-        print(f"      Details: Face Sim: {v_cb1['details']['face_similarity']:.4f}, Name Sim: {v_cb1['details']['name_similarity']:.4f}")
-    
+        print(
+            f"  [+] P1 Match Result: {v_cb1['status']} (Score: {v_cb1['confidence_score']:.4f})"
+        )
+        print(
+            f"      Details: Face Sim: {v_cb1['details']['face_similarity']:.4f}, Name Sim: {v_cb1['details']['name_similarity']:.4f}"
+        )
+
     # Match Person 3 (p3a vs p3b)
-    v3_txn = tester.verify(get_image_path("p3b.jpg"), "Alice Smith", "1985-05-20", "FEMALE")
+    v3_txn = tester.verify(
+        get_image_path("p4b.png"), "Alice Smith", "1985-05-20", "FEMALE"
+    )
     v_cb3 = tester.wait_for_callback(v3_txn)
     if v_cb3:
-        print(f"  [+] P3 Match Result: {v_cb3['status']} (Score: {v_cb3['confidence_score']:.4f})")
+        print(
+            f"  [+] P3 Match Result: {v_cb3['status']} (Score: {v_cb3['confidence_score']:.4f})"
+        )
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("PHASE 3: VERIFICATION (MISMATCH)")
-    print("="*50)
+    print("=" * 50)
 
     # Mismatch (p1a vs p2a) - Person 1 name but Person 2 photo
-    v_mismatch_txn = tester.verify(get_image_path("p2a.png"), "John Doe", "1990-01-01", "MALE")
+    v_mismatch_txn = tester.verify(
+        get_image_path("p2a.png"), "John Doe", "1990-01-01", "MALE"
+    )
     v_cb_mismatch = tester.wait_for_callback(v_mismatch_txn)
     if v_cb_mismatch:
-        print(f"  [+] Mismatch Result: {v_cb_mismatch['status']} (Score: {v_cb_mismatch['confidence_score']:.4f})")
-        if v_cb_mismatch.get('details', {}).get('explanation'):
+        print(
+            f"  [+] Mismatch Result: {v_cb_mismatch['status']} (Score: {v_cb_mismatch['confidence_score']:.4f})"
+        )
+        if v_cb_mismatch.get("details", {}).get("explanation"):
             print(f"      Reason: {v_cb_mismatch['details']['explanation']}")
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("PHASE 4: DEMOGRAPHIC MISMATCH")
-    print("="*50)
+    print("=" * 50)
 
     # Right photo, wrong name
-    v_demo_txn = tester.verify(get_image_path("p1a.png"), "Wrong Name", "1990-01-01", "MALE")
+    v_demo_txn = tester.verify(
+        get_image_path("p1a.png"), "Wrong Name", "1990-01-01", "MALE"
+    )
     v_cb_demo = tester.wait_for_callback(v_demo_txn)
     if v_cb_demo:
-        print(f"  [+] Demo Mismatch Result: {v_cb_demo['status']} (Score: {v_cb_demo['confidence_score']:.4f})")
-        print(f"      Details: Name Sim: {v_cb_demo['details']['name_similarity']:.4f}, Face Sim: {v_cb_demo['details']['face_similarity']:.4f}")
+        print(
+            f"  [+] Demo Mismatch Result: {v_cb_demo['status']} (Score: {v_cb_demo['confidence_score']:.4f})"
+        )
+        print(
+            f"      Details: Name Sim: {v_cb_demo['details']['name_similarity']:.4f}, Face Sim: {v_cb_demo['details']['face_similarity']:.4f}"
+        )
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("PHASE 5: SEARCH")
-    print("="*50)
-    
+    print("=" * 50)
+
     results = tester.search(name="John Doe")
     if results is None:
         print("  [!] Search returned None (unexpected)")
@@ -194,9 +234,10 @@ def run_suite():
         for r in results:
             print(f"      - {r['name']} ({r['gender']}) - TXN: {r['transaction_id']}")
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("TEST SUITE COMPLETED")
-    print("="*50)
+    print("=" * 50)
+
 
 if __name__ == "__main__":
     run_suite()
