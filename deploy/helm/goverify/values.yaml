@@ -7,10 +7,10 @@ image:
   tag: "latest"
 
 service:
-  type: ClusterIP
+  type: LoadBalancer
   port: 8080
 
-# Secrets (Should be handled via sealed secrets or vault in real prod)
+# Secrets
 secrets:
   jwtSecret: "super-secret-key-for-hackathon"
   aesKey: "6861636b6174686f6e2d7365637572652d7069692d656e6372797074696f6e2d"
@@ -56,7 +56,7 @@ worker:
     REDIS_ADDRESS: redis-svc:6379
     AI_SERVICE_URL: http://kyc-ai:5000
 
-# AI Service (Python/DeepFace)
+# AI Service
 ai:
   name: kyc-ai
   replicas: 1
@@ -75,14 +75,11 @@ ai:
 infra:
   enabled: true
 
-# Observability toggle
+# Observability Settings
 observability:
   enabled: true
+  type: LoadBalancer
 
 # Ingress Settings
 ingress:
   enabled: false
-  className: "nginx"
-  annotations: {}
-  hosts:
-    - host: kyc.example.com

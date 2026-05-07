@@ -5,6 +5,7 @@ kind: Service
 metadata:
   name: prometheus-svc
 spec:
+  type: {{ .Values.observability.type }}
   ports:
     - port: 9090
   selector:
@@ -35,6 +36,7 @@ kind: Service
 metadata:
   name: grafana-svc
 spec:
+  type: {{ .Values.observability.type }}
   ports:
     - port: 3000
   selector:
@@ -96,6 +98,7 @@ kind: Service
 metadata:
   name: jaeger-svc
 spec:
+  type: {{ .Values.observability.type }}
   ports:
     - name: query
       port: 16686
