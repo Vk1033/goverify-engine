@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	CollectionName = "kyc_identities_v15"
+	CollectionName = "kyc_identities_v17"
 	DimFace        = 512
 	DimName        = 768
 )
@@ -72,8 +72,9 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 				{Name: "id", DataType: entity.FieldTypeInt64, PrimaryKey: true, AutoID: true},
 				{Name: "transaction_id", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "128"}},
 				{Name: "demographic_hash", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "256"}},
-				{Name: "name", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "256"}},
-				{Name: "dob", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "32"}},
+				{Name: "name", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "512"}},
+				{Name: "name_blind_index", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "128"}},
+				{Name: "dob", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "128"}},
 				{Name: "gender", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "16"}},
 				{Name: "face_embedding", DataType: entity.FieldTypeFloatVector, TypeParams: map[string]string{"dim": fmt.Sprintf("%d", DimFace)}},
 			},
@@ -105,6 +106,7 @@ func (m *MilvusClient) InsertIdentity(ctx context.Context, record *domain.Identi
 	txnIds := []string{record.TransactionID}
 	hashes := []string{record.DemographicHash}
 	names := []string{record.Name}
+	blindIndexes := []string{record.NameBlindIndex}
 	dobs := []string{record.DOB}
 	genders := []string{record.Gender}
 	
@@ -113,11 +115,12 @@ func (m *MilvusClient) InsertIdentity(ctx context.Context, record *domain.Identi
 	idCol := entity.NewColumnVarChar("transaction_id", txnIds)
 	hashCol := entity.NewColumnVarChar("demographic_hash", hashes)
 	nameCol := entity.NewColumnVarChar("name", names)
+	blindCol := entity.NewColumnVarChar("name_blind_index", blindIndexes)
 	dobCol := entity.NewColumnVarChar("dob", dobs)
 	genderCol := entity.NewColumnVarChar("gender", genders)
 	faceCol := entity.NewColumnFloatVector("face_embedding", DimFace, faceSigs)
 
-	_, err := m.client.Insert(ctx, CollectionName, "", idCol, hashCol, nameCol, dobCol, genderCol, faceCol)
+	_, err := m.client.Insert(ctx, CollectionName, "", idCol, hashCol, nameCol, blindCol, dobCol, genderCol, faceCol)
 	if err != nil {
 		return fmt.Errorf("insert failed: %w", err)
 	}
@@ -203,9 +206,9 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 func (m *MilvusClient) QueryIdentities(ctx context.Context, name string, gender string) ([]*domain.IdentityRecord, error) {
 	expr := ""
 	if name != "" && gender != "" {
-		expr = fmt.Sprintf("name == \"%s\" && gender == \"%s\"", name, gender)
+		expr = fmt.Sprintf("name_blind_index == \"%s\" && gender == \"%s\"", name, gender)
 	} else if name != "" {
-		expr = fmt.Sprintf("name == \"%s\"", name)
+		expr = fmt.Sprintf("name_blind_index == \"%s\"", name)
 	} else if gender != "" {
 		expr = fmt.Sprintf("gender == \"%s\"", gender)
 	}

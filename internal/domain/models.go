@@ -51,6 +51,7 @@ type IdentityRecord struct {
 	ID              int64     `json:"-"`
 	TransactionID   string    `json:"transaction_id"`
 	Name            string    `json:"name"`
+	NameBlindIndex  string    `json:"-"`
 	DOB             string    `json:"dob"`
 	Gender          string    `json:"gender"`
 	NameEmbedding   []float32 `json:"-"`

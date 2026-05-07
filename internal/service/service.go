@@ -2,16 +2,20 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
 
+	"github.com/vk1033/goverify-engine/internal/config"
 	"github.com/vk1033/goverify-engine/internal/domain"
 	"github.com/vk1033/goverify-engine/internal/embedding"
 	"github.com/vk1033/goverify-engine/internal/observability"
 	"github.com/vk1033/goverify-engine/internal/vectordb"
+	"github.com/vk1033/goverify-engine/pkg/crypto"
 	"github.com/vk1033/goverify-engine/pkg/hash"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -40,13 +44,15 @@ const (
 type serviceImpl struct {
 	embeddings embedding.Service
 	milvus     vectordb.Client
+	cfg        *config.Config
 	logger     *zerolog.Logger
 }
 
-func NewKYCService(e embedding.Service, m vectordb.Client, logger *zerolog.Logger) KYCService {
+func NewKYCService(e embedding.Service, m vectordb.Client, cfg *config.Config, logger *zerolog.Logger) KYCService {
 	return &serviceImpl{
 		embeddings: e,
 		milvus:     m,
+		cfg:        cfg,
 		logger:     logger,
 	}
 }
@@ -75,10 +81,25 @@ func (s *serviceImpl) ProcessEnrollment(ctx context.Context, txnID string, req d
 		return fmt.Errorf("hashing failed: %w", err)
 	}
 
+	// Encrypt PII
+	encName, err := crypto.Encrypt(req.Name, s.cfg.Security.AESKey)
+	if err != nil {
+		return fmt.Errorf("name encryption failed: %w", err)
+	}
+	encDOB, err := crypto.Encrypt(req.DOB, s.cfg.Security.AESKey)
+	if err != nil {
+		return fmt.Errorf("dob encryption failed: %w", err)
+	}
+
+	// Generate blind index for searching (SHA-256 of normalized name)
+	nameHash := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(req.Name))))
+	blindIndex := hex.EncodeToString(nameHash[:])
+
 	record := &domain.IdentityRecord{
 		TransactionID:   txnID,
-		Name:            req.Name,
-		DOB:             req.DOB,
+		Name:            encName,
+		NameBlindIndex:  blindIndex,
+		DOB:             encDOB,
 		Gender:          req.Gender,
 		NameEmbedding:   nameEmb,
 		FaceEmbedding:   faceEmb,
@@ -134,6 +155,21 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 	var bestDemographicMatch bool
 
 	for _, res := range results {
+		// Decrypt name and dob for matching/logic if needed
+		decName, err := crypto.Decrypt(res.Name, s.cfg.Security.AESKey)
+		if err != nil {
+			s.logger.Error().Err(err).Str("txnID", txnID).Msg("Failed to decrypt name from DB")
+			continue
+		}
+		res.Name = decName
+
+		decDOB, err := crypto.Decrypt(res.DOB, s.cfg.Security.AESKey)
+		if err != nil {
+			s.logger.Error().Err(err).Str("txnID", txnID).Msg("Failed to decrypt DOB from DB")
+			continue
+		}
+		res.DOB = decDOB
+
 		match, err := hash.CompareDemographicHash(req.DOB, req.Gender, res.DemographicHash)
 		if err == nil && match {
 			bestMatch = res
@@ -198,7 +234,31 @@ func (s *serviceImpl) SearchIdentities(ctx context.Context, name string, gender 
 	span.SetAttributes(attribute.String("name", name), attribute.String("gender", gender))
 
 	s.logger.Info().Ctx(ctx).Str("name", name).Str("gender", gender).Msg("searching identities")
-	return s.milvus.QueryIdentities(ctx, name, gender)
+	
+	searchName := name
+	if name != "" {
+		hash := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(name))))
+		searchName = hex.EncodeToString(hash[:])
+	}
+
+	results, err := s.milvus.QueryIdentities(ctx, searchName, gender)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decrypt results
+	for _, res := range results {
+		decName, err := crypto.Decrypt(res.Name, s.cfg.Security.AESKey)
+		if err == nil {
+			res.Name = decName
+		}
+		decDOB, err := crypto.Decrypt(res.DOB, s.cfg.Security.AESKey)
+		if err == nil {
+			res.DOB = decDOB
+		}
+	}
+
+	return results, nil
 }
 
 // calculateStringSimilarity returns a value between 0 and 1 representing the similarity between two strings.

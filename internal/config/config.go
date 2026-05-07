@@ -14,6 +14,11 @@ type Config struct {
 	Redis       RedisConfig
 	JWT         JWTConfig
 	AIService   AIServiceConfig
+	Security    SecurityConfig
+}
+
+type SecurityConfig struct {
+	AESKey string `mapstructure:"AES_KEY"`
 }
 
 type AIServiceConfig struct {
@@ -50,6 +55,7 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("REDIS_ADDRESS", "localhost:6379")
 	viper.SetDefault("JWT_SECRET", "super-secret-key-for-hackathon")
 	viper.SetDefault("AI_SERVICE_URL", "http://localhost:5000")
+	viper.SetDefault("AES_KEY", "6861636b6174686f6e2d7365637572652d7069692d656e6372797074696f6e2d")
 
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
@@ -66,6 +72,7 @@ func LoadConfig() (*Config, error) {
 	cfg.Redis.Address = viper.GetString("REDIS_ADDRESS")
 	cfg.JWT.Secret = viper.GetString("JWT_SECRET")
 	cfg.AIService.URL = viper.GetString("AI_SERVICE_URL")
+	cfg.Security.AESKey = viper.GetString("AES_KEY")
 
 	return &cfg, nil
 }
