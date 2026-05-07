@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	CollectionName = "kyc_identities_v14"
+	CollectionName = "kyc_identities_v15"
 	DimFace        = 512
 	DimName        = 768
 )
@@ -216,52 +216,38 @@ func (m *MilvusClient) QueryIdentities(ctx context.Context, name string, gender 
 	}
 
 	var records []*domain.IdentityRecord
-	for _, field := range queryResult {
-		// Milvus Query returns columns. We need to reconstruct records.
-		// For simplicity in the mock, we assume all columns have the same length.
-		// However, it's easier to use Search with an empty vector if we want record-wise results,
-		// but Query is the correct way for scalar filtering.
+	rowCount := 0
+	if len(queryResult) > 0 {
+		rowCount = queryResult[0].Len()
+	}
 
-		// Let's implement a simple record reconstruction from columns.
-		rowCount := 0
-		if field.Name() == "transaction_id" {
-			if v, ok := field.(*entity.ColumnVarChar); ok {
-				rowCount = v.Len()
-			}
-		}
-		if rowCount == 0 {
-			continue
-		}
-
-		for i := 0; i < rowCount; i++ {
-			record := &domain.IdentityRecord{}
-			for _, f := range queryResult {
-				switch f.Name() {
-				case "transaction_id":
-					if v, ok := f.(*entity.ColumnVarChar); ok {
-						record.TransactionID, _ = v.ValueByIdx(i)
-					}
-				case "demographic_hash":
-					if v, ok := f.(*entity.ColumnVarChar); ok {
-						record.DemographicHash, _ = v.ValueByIdx(i)
-					}
-				case "name":
-					if v, ok := f.(*entity.ColumnVarChar); ok {
-						record.Name, _ = v.ValueByIdx(i)
-					}
-				case "dob":
-					if v, ok := f.(*entity.ColumnVarChar); ok {
-						record.DOB, _ = v.ValueByIdx(i)
-					}
-				case "gender":
-					if v, ok := f.(*entity.ColumnVarChar); ok {
-						record.Gender, _ = v.ValueByIdx(i)
-					}
+	for i := 0; i < rowCount; i++ {
+		record := &domain.IdentityRecord{}
+		for _, f := range queryResult {
+			switch f.Name() {
+			case "transaction_id":
+				if v, ok := f.(*entity.ColumnVarChar); ok {
+					record.TransactionID, _ = v.ValueByIdx(i)
+				}
+			case "demographic_hash":
+				if v, ok := f.(*entity.ColumnVarChar); ok {
+					record.DemographicHash, _ = v.ValueByIdx(i)
+				}
+			case "name":
+				if v, ok := f.(*entity.ColumnVarChar); ok {
+					record.Name, _ = v.ValueByIdx(i)
+				}
+			case "dob":
+				if v, ok := f.(*entity.ColumnVarChar); ok {
+					record.DOB, _ = v.ValueByIdx(i)
+				}
+			case "gender":
+				if v, ok := f.(*entity.ColumnVarChar); ok {
+					record.Gender, _ = v.ValueByIdx(i)
 				}
 			}
-			records = append(records, record)
 		}
-		break // Found rowCount, processed all columns for these rows
+		records = append(records, record)
 	}
 
 	return records, nil

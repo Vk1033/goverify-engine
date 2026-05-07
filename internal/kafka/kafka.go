@@ -26,14 +26,16 @@ type producerImpl struct {
 
 func NewProducer(cfg *config.Config, logger *zerolog.Logger) Producer {
 	ew := &kafka.Writer{
-		Addr:     kafka.TCP(cfg.Kafka.Brokers...),
-		Topic:    cfg.Kafka.EnrollTopic,
-		Balancer: &kafka.LeastBytes{},
+		Addr:       kafka.TCP(cfg.Kafka.Brokers...),
+		Topic:      cfg.Kafka.EnrollTopic,
+		Balancer:   &kafka.LeastBytes{},
+		BatchBytes: 10485760,
 	}
 	vw := &kafka.Writer{
-		Addr:     kafka.TCP(cfg.Kafka.Brokers...),
-		Topic:    cfg.Kafka.VerifyTopic,
-		Balancer: &kafka.LeastBytes{},
+		Addr:       kafka.TCP(cfg.Kafka.Brokers...),
+		Topic:      cfg.Kafka.VerifyTopic,
+		Balancer:   &kafka.LeastBytes{},
+		BatchBytes: 10485760,
 	}
 	return &producerImpl{
 		enrollWriter: ew,

@@ -1,6 +1,12 @@
 package embedding
 
-import "math"
+import (
+	"fmt"
+	"math"
+
+	"github.com/rs/zerolog"
+	"github.com/vk1033/goverify-engine/internal/config"
+)
 
 // Service defines the interface for generating embeddings.
 type Service interface {
@@ -22,4 +28,14 @@ func normalize(v []float32) []float32 {
 		v[i] /= norm
 	}
 	return v
+}
+
+func ProvideService(cfg *config.Config, logger *zerolog.Logger) (Service, error) {
+	if cfg.AIService.URL == "" {
+		return nil, fmt.Errorf("AI_SERVICE_URL not set")
+	}
+
+	svc := NewPythonClient(cfg.AIService.URL, logger)
+	logger.Info().Str("url", cfg.AIService.URL).Msg("Initialized Python-based AI service client")
+	return svc, nil
 }

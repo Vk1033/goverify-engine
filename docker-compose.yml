@@ -18,6 +18,8 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_MESSAGE_MAX_BYTES: 10485760
+      KAFKA_REPLICA_FETCH_MAX_BYTES: 10485760
 
   etcd:
     image: quay.io/coreos/etcd:v3.5.5
@@ -68,10 +70,12 @@ services:
       - KAFKA_BROKERS=kafka:29092
       - MILVUS_ADDRESS=milvus-standalone:19530
       - REDIS_ADDRESS=redis:6379
+      - AI_SERVICE_URL=http://ai-service:5000
     depends_on:
       - kafka
       - milvus-standalone
       - redis
+      - ai-service
 
   kyc-worker:
     build:
@@ -82,14 +86,28 @@ services:
       - KAFKA_BROKERS=kafka:29092
       - MILVUS_ADDRESS=milvus-standalone:19530
       - REDIS_ADDRESS=redis:6379
+      - AI_SERVICE_URL=http://ai-service:5000
     ports:
       - "9090:9090"
     depends_on:
       - kafka
       - milvus-standalone
       - redis
+      - ai-service
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   jaeger:
     image: jaegertracing/all-in-one:1.45

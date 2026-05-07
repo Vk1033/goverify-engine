@@ -13,6 +13,11 @@ type Config struct {
 	Milvus      MilvusConfig
 	Redis       RedisConfig
 	JWT         JWTConfig
+	AIService   AIServiceConfig
+}
+
+type AIServiceConfig struct {
+	URL string `mapstructure:"AI_SERVICE_URL"`
 }
 
 type KafkaConfig struct {
@@ -44,6 +49,7 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("MILVUS_ADDRESS", "localhost:19530")
 	viper.SetDefault("REDIS_ADDRESS", "localhost:6379")
 	viper.SetDefault("JWT_SECRET", "super-secret-key-for-hackathon")
+	viper.SetDefault("AI_SERVICE_URL", "http://localhost:5000")
 
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
@@ -59,6 +65,7 @@ func LoadConfig() (*Config, error) {
 	cfg.Milvus.Address = viper.GetString("MILVUS_ADDRESS")
 	cfg.Redis.Address = viper.GetString("REDIS_ADDRESS")
 	cfg.JWT.Secret = viper.GetString("JWT_SECRET")
+	cfg.AIService.URL = viper.GetString("AI_SERVICE_URL")
 
 	return &cfg, nil
 }
