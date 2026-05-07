@@ -10,10 +10,15 @@ service:
   type: ClusterIP
   port: 8080
 
-# API Service (No AI logic, pure Go)
+# Secrets (Should be handled via sealed secrets or vault in real prod)
+secrets:
+  jwtSecret: "super-secret-key-for-hackathon"
+  aesKey: "6861636b6174686f6e2d7365637572652d7069692d656e6372797074696f6e2d"
+
+# API Service
 api:
   name: kyc-api
-  replicas: 2
+  replicas: 1
   resources:
     limits:
       cpu: 500m
@@ -25,27 +30,46 @@ api:
     ENVIRONMENT: production
     PORT: 8080
     KAFKA_BROKERS: kafka-svc:9092
+    KAFKA_ENROLL_TOPIC: kyc_enroll
+    KAFKA_VERIFY_TOPIC: kyc_verify
     MILVUS_ADDRESS: milvus-svc:19530
     REDIS_ADDRESS: redis-svc:6379
+    AI_SERVICE_URL: http://kyc-ai:5000
 
-# Worker Service (Heavy AI Logic)
+# Worker Service
 worker:
   name: kyc-worker
-  replicas: 3
+  replicas: 1
   resources:
     limits:
       cpu: "2"
       memory: 4Gi
     requests:
       cpu: "1"
-      memory: 2Gi
+      memory: 1Gi
   env:
     ENVIRONMENT: production
     KAFKA_BROKERS: kafka-svc:9092
+    KAFKA_ENROLL_TOPIC: kyc_enroll
+    KAFKA_VERIFY_TOPIC: kyc_verify
     MILVUS_ADDRESS: milvus-svc:19530
     REDIS_ADDRESS: redis-svc:6379
-    ONNX_MODEL_PATH: "/models/mobilefacenet.onnx"
-    ONNX_LIB_PATH: "/usr/lib/libonnxruntime.so"
+    AI_SERVICE_URL: http://kyc-ai:5000
+
+# AI Service (Python/DeepFace)
+ai:
+  name: kyc-ai
+  replicas: 1
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "1"
+      memory: 1Gi
+  env:
+    ENVIRONMENT: production
+    PORT: 5000
 
 # Infrastructure toggle
 infra:

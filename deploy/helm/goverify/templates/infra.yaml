@@ -29,7 +29,40 @@ spec:
           ports:
             - containerPort: 6379
 ---
-# Kafka (Standalone KRaft)
+# Zookeeper
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper-svc
+spec:
+  ports:
+    - port: 2181
+  selector:
+    app: zookeeper
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zookeeper
+spec:
+  selector:
+    matchLabels:
+      app: zookeeper
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+    spec:
+      containers:
+        - name: zookeeper
+          image: confluentinc/cp-zookeeper:7.3.0
+          env:
+            - name: ZOOKEEPER_CLIENT_PORT
+              value: "2181"
+            - name: ZOOKEEPER_TICK_TIME
+              value: "2000"
+---
+# Kafka
 apiVersion: v1
 kind: Service
 metadata:
@@ -55,10 +88,26 @@ spec:
     spec:
       containers:
         - name: kafka
-          image: bashj79/kafka-kraft:latest
+          image: confluentinc/cp-kafka:7.3.0
           env:
+            - name: KAFKA_BROKER_ID
+              value: "1"
+            - name: KAFKA_ZOOKEEPER_CONNECT
+              value: "zookeeper-svc:2181"
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: PLAINTEXT://kafka-svc:9092
+              value: "PLAINTEXT://kafka-svc:9092"
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "PLAINTEXT:PLAINTEXT"
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: "PLAINTEXT"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_MESSAGE_MAX_BYTES
+              value: "10485760"
+            - name: KAFKA_REPLICA_FETCH_MAX_BYTES
+              value: "10485760"
+            - name: KAFKA_SOCKET_REQUEST_MAX_BYTES
+              value: "10485760"
           ports:
             - containerPort: 9092
 ---

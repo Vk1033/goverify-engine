@@ -94,6 +94,7 @@ To deploy the engine to a Kubernetes cluster using Helm:
    ```bash
    docker build -t goverify-engine-api:latest -f deploy/Dockerfile.api .
    docker build -t goverify-engine-worker:latest -f deploy/Dockerfile.worker .
+   docker build -t goverify-engine-ai:latest -f ai-service/Dockerfile ai-service/
    # Push to your registry...
    ```
 
@@ -106,4 +107,5 @@ To deploy the engine to a Kubernetes cluster using Helm:
    ```bash
    kubectl get pods -l app=kyc-api
    kubectl get pods -l app=kyc-worker
+   kubectl get pods -l app=kyc-ai
    ```

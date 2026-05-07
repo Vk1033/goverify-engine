@@ -20,7 +20,7 @@ func NewPythonClient(baseURL string, logger *zerolog.Logger) *PythonClient {
 	return &PythonClient{
 		baseURL: baseURL,
 		client: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 60 * time.Second,
 		},
 		logger: logger,
 	}

@@ -25,14 +25,26 @@ spec:
               value: {{ .Values.worker.env.ENVIRONMENT }}
             - name: KAFKA_BROKERS
               value: {{ .Values.worker.env.KAFKA_BROKERS }}
+            - name: KAFKA_ENROLL_TOPIC
+              value: {{ .Values.worker.env.KAFKA_ENROLL_TOPIC }}
+            - name: KAFKA_VERIFY_TOPIC
+              value: {{ .Values.worker.env.KAFKA_VERIFY_TOPIC }}
             - name: MILVUS_ADDRESS
               value: {{ .Values.worker.env.MILVUS_ADDRESS }}
             - name: REDIS_ADDRESS
               value: {{ .Values.worker.env.REDIS_ADDRESS }}
-            - name: ONNX_MODEL_PATH
-              value: {{ .Values.worker.env.ONNX_MODEL_PATH | quote }}
-            - name: ONNX_LIB_PATH
-              value: {{ .Values.worker.env.ONNX_LIB_PATH | quote }}
+            - name: AI_SERVICE_URL
+              value: {{ .Values.worker.env.AI_SERVICE_URL }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: JWT_SECRET
+            - name: AES_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: AES_KEY
           readinessProbe:
             httpGet:
               path: /metrics

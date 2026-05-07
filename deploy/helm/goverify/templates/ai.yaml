@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.ai.name }}
+  labels:
+    app: {{ .Values.ai.name }}
+spec:
+  replicas: {{ .Values.ai.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.ai.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.ai.name }}
+    spec:
+      containers:
+        - name: {{ .Values.ai.name }}
+          image: "{{ .Values.image.repository }}-ai:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.ai.env.PORT }}
+          resources:
+            {{- toYaml .Values.ai.resources | nindent 12 }}
+          env:
+            - name: ENVIRONMENT
+              value: {{ .Values.ai.env.ENVIRONMENT }}
+            - name: PORT
+              value: {{ .Values.ai.env.PORT | quote }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.ai.env.PORT }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.ai.env.PORT }}
+            initialDelaySeconds: 60
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.ai.name }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5000
+      targetPort: {{ .Values.ai.env.PORT }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Values.ai.name }}

@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 
 	"github.com/rs/zerolog"
 
@@ -19,6 +21,35 @@ import (
 	"github.com/vk1033/goverify-engine/internal/worker"
 	"github.com/vk1033/goverify-engine/pkg/logger"
 )
+
+func StartMetricsServer(lc fx.Lifecycle, log *zerolog.Logger) {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", observability.MetricsHandler())
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "OK")
+	})
+
+	srv := &http.Server{
+		Addr:    ":9090",
+		Handler: mux,
+	}
+
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			log.Info().Msg("Starting Worker Metrics Server on :9090")
+			go func() {
+				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+					log.Error().Err(err).Msg("Failed to start metrics server")
+				}
+			}()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			return srv.Shutdown(ctx)
+		},
+	})
+}
 
 func RunWorker(lc fx.Lifecycle, w *worker.Worker, log *zerolog.Logger) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -68,6 +99,7 @@ var rootCmd = &cobra.Command{
 					},
 				})
 			}),
+			fx.Invoke(StartMetricsServer),
 			fx.Invoke(RunWorker), // Start the worker loops
 		)
 		app.Run()

@@ -29,10 +29,26 @@ spec:
               value: {{ .Values.api.env.PORT | quote }}
             - name: KAFKA_BROKERS
               value: {{ .Values.api.env.KAFKA_BROKERS }}
+            - name: KAFKA_ENROLL_TOPIC
+              value: {{ .Values.api.env.KAFKA_ENROLL_TOPIC }}
+            - name: KAFKA_VERIFY_TOPIC
+              value: {{ .Values.api.env.KAFKA_VERIFY_TOPIC }}
             - name: MILVUS_ADDRESS
               value: {{ .Values.api.env.MILVUS_ADDRESS }}
             - name: REDIS_ADDRESS
               value: {{ .Values.api.env.REDIS_ADDRESS }}
+            - name: AI_SERVICE_URL
+              value: {{ .Values.api.env.AI_SERVICE_URL }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: JWT_SECRET
+            - name: AES_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: AES_KEY
           readinessProbe:
             httpGet:
               path: /health

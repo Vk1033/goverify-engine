@@ -8,11 +8,12 @@ import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Configuration
-API_URL = "http://localhost:8080"
-CALLBACK_PORT = 9999
+API_URL = os.getenv("API_URL", "http://localhost:8080")
+CALLBACK_PORT = int(os.getenv("CALLBACK_PORT", 9999))
 # host.docker.internal works when running worker in Docker and listener on Host
-# If running both on Host, use localhost or 127.0.0.1
-CALLBACK_URL = f"http://host.docker.internal:{CALLBACK_PORT}/callback"
+# For K8s on Linux, use the host IP reachable from the pods
+CALLBACK_HOST = os.getenv("CALLBACK_HOST", "host.docker.internal")
+CALLBACK_URL = f"http://{CALLBACK_HOST}:{CALLBACK_PORT}/callback"
 
 # Base directory for images, relative to this script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -158,7 +159,7 @@ def run_suite():
 
     # Enroll Person 3
     p3_txn = tester.enroll(
-        get_image_path("p4a.png"), "Alice Smith", "1985-05-20", "FEMALE"
+        get_image_path("p3a.png"), "Alice Smith", "1985-05-20", "FEMALE"
     )
     cb3 = tester.wait_for_callback(p3_txn)
     if cb3:
@@ -181,7 +182,7 @@ def run_suite():
 
     # Match Person 3 (p3a vs p3b)
     v3_txn = tester.verify(
-        get_image_path("p4b.png"), "Alice Smith", "1985-05-20", "FEMALE"
+        get_image_path("p3b.png"), "Alice Smith", "1985-05-20", "FEMALE"
     )
     v_cb3 = tester.wait_for_callback(v3_txn)
     if v_cb3:
@@ -211,7 +212,7 @@ def run_suite():
 
     # Right photo, wrong name
     v_demo_txn = tester.verify(
-        get_image_path("p1a.png"), "Wrong Name", "1990-01-01", "MALE"
+        get_image_path("p1b.png"), "Wrong Name", "1990-01-01", "MALE"
     )
     v_cb_demo = tester.wait_for_callback(v_demo_txn)
     if v_cb_demo:
