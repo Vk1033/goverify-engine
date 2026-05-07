@@ -1,111 +1,159 @@
-# KYC Visual Identity Engine
+# GoVerify Engine 🛡️
 
-This is a scalable, AI-driven KYC system that creates a visual identity of a user using facial embeddings and demographic data, and enables instant re-verification (Re-KYC). Built for high-concurrency environments utilizing Golang, Kafka, Milvus, Redis, and Kubernetes.
+[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
+[![Milvus](https://img.shields.io/badge/VectorDB-Milvus-0288D1?style=for-the-badge)](https://milvus.io/)
+[![Kafka](https://img.shields.io/badge/Messaging-Kafka-231F20?style=for-the-badge&logo=apachekafka)](https://kafka.apache.org/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-## System Architecture
+**GoVerify Engine** is a state-of-the-art, AI-powered identity verification (KYC) system designed for extreme scalability and precision. It leverages high-fidelity facial biometrics, semantic name matching, and a distributed event-driven architecture to provide instant, reliable Re-KYC capabilities.
 
-- **KYC API Gateway**: Receives REST requests (`/kyc/enroll`, `/kyc/verify`, `/kyc/status/:transaction_id`), assigns a unique Transaction ID, and pushes messages asynchronously to Kafka.
-- **KYC Worker**: A robust consumer using `fx` lifecycle management that processes requests from Kafka, generates multi-modal embeddings (Face 512D, Name 768D), computes Argon2 demographic hashes, and inserts/verifies against the Milvus Vector Database.
-- **Kafka**: Acts as the message broker for decoupling request ingestion and processing.
-- **Milvus Vector DB**: Stores identities and performs high-speed cosine similarity matching for Face and Name embeddings.
-- **Redis**: Functions as a fast, high-availability key-value store for polling transaction statuses (`GET /kyc/status/:transaction_id`).
+---
 
-## Tech Stack
-- **Language**: Golang 1.22+
-- **DI Framework**: `uber-go/fx`
-- **REST framework**: `gin-gonic/gin`
-- **Configuration**: `spf13/viper` & `spf13/cobra`
-- **Vector DB**: `milvus-sdk-go/v2`
-- **Messaging**: `segmentio/kafka-go`
-- **Data store**: `go-redis/redis/v8`
+## 🚀 Key Features
 
-## Quick Start (Docker Compose)
+- **Biometric Identity**: DeepFace-powered facial embeddings (Facenet512) for high-precision matching.
+- **Semantic Verification**: Hybrid matching combining biometric similarity with syntactic (Levenshtein) name analysis.
+- **Event-Driven Scaling**: Kafka-backed asynchronous processing to handle massive request spikes.
+- **Ultra-Fast Search**: Milvus Vector DB for sub-millisecond retrieval across millions of identities.
+- **Comprehensive Observability**: Native integration with Prometheus, Grafana, Jaeger, and Loki for full-stack visibility.
+- **Enterprise Ready**: Built with `uber-go/fx` for clean dependency injection and modularity.
 
-1. **Start Infrastructure**:
-   ```bash
-   docker-compose up -d zookeeper kafka etcd minio milvus-standalone redis
-   ```
-2. **Start Services**:
-   ```bash
-   docker-compose up -d kyc-api kyc-worker
-   ```
-3. **Verify API is running**:
-   ```bash
-   curl -H "Authorization: Bearer my-token" http://localhost:8080/kyc/status/dummy_txn
-   ```
+---
 
-## Development & Testing
+## 🏗️ System Architecture
 
-Ensure you have Go installed, then install dependencies:
-```bash
-go mod tidy
+The following diagram illustrates the high-concurrency architecture of the GoVerify Engine:
+
+```mermaid
+graph TD
+    %% External
+    Client([Client Application]) -->|REST API| API[KYC API]
+    API -->|Auth/State| Redis[(Redis)]
+    
+    %% Orchestration
+    API -->|Push Task| Kafka{Kafka}
+    Kafka -->|Consume Task| Worker[KYC Worker]
+    
+    %% Processing
+    Worker -->|Biometric Requests| AI[AI Service]
+    subgraph "AI Microservice (Python)"
+        AI -->|Facenet512| FaceModel[Face Embedding Model]
+    end
+    
+    Worker -->|Syntactic Match| Lev[Levenshtein Similarity]
+    
+    %% Data Store
+    Worker -->|Vector Search| Milvus[(Milvus Vector DB)]
+    subgraph "Milvus Infrastructure"
+        Milvus --> MinIO[(MinIO)]
+        Milvus --> Etcd[(Etcd)]
+    end
+    
+    %% Status & Callbacks
+    Worker -->|Update Status| Redis
+    Worker -->|Callback| Client
+    
+    %% Observability
+    API -.->|Metrics| Prom[Prometheus]
+    Worker -.->|Metrics| Prom
+    
+    API -.->|Traces| Jaeger[Jaeger]
+    Worker -.->|Traces| Jaeger
+    
+    API -.->|Logs| Loki[Loki]
+    Worker -.->|Logs| Loki
+    
+    Prom --> Grafana[Grafana Unified Dashboard]
+    Jaeger --> Grafana
+    Loki --> Grafana
 ```
 
-Start the API locally:
-```bash
-go run cmd/kyc-api/main.go
-```
+---
 
-Start the Worker locally:
-```bash
-go run cmd/kyc-worker/main.go
-```
+## 🛠️ Tech Stack
 
-## API Documentation
+| Category | Technology |
+| :--- | :--- |
+| **Core** | Golang 1.25, Python 3.10 |
+| **Frameworks** | Gin (Go), Flask (Python), Uber-fx |
+| **Messaging** | Apache Kafka |
+| **Databases** | Milvus (Vector), Redis (Cache/Status) |
+| **AI/ML** | DeepFace, Facenet512 |
+| **Observability** | Prometheus, Grafana, Jaeger, Loki |
+| **Infrastructure** | Docker, Kubernetes, Helm |
 
-### POST `/kyc/enroll`
-Enrolls a new user identity asynchronously.
-**Request Body**:
-```json
-{
-  "photo_base64": "<base64_string>",
-  "name": "Jane Doe",
-  "dob": "1990-01-01",
-  "gender": "FEMALE"
-}
-```
+---
 
-### POST `/kyc/verify`
-Verifies a returning user.
-**Request Body**:
-```json
-{
-  "photo_base64": "<base64_string>",
-  "name": "Jane Doe",
-  "dob": "1990-01-01",
-  "gender": "FEMALE"
-}
-```
+## 🚦 Getting Started
 
-### GET `/kyc/status/:transaction_id`
-Retrieves the async process result.
+### Prerequisites
 
-### GET `/kyc/search`
-Searches for identities based on name/gender metadata.
+- Docker & Docker Compose
+- Go 1.25+ (for local development)
+- Python 3.10+ (for AI service development)
 
-## Interactive API Documentation
-Swagger UI is available at: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
+### Quick Start (Local Deployment)
 
-## Kubernetes Deployment (Helm)
-
-To deploy the engine to a Kubernetes cluster using Helm:
-
-1. **Build and push images**:
+1. **Clone the repository**:
    ```bash
-   docker build -t goverify-engine-api:latest -f deploy/Dockerfile.api .
-   docker build -t goverify-engine-worker:latest -f deploy/Dockerfile.worker .
-   docker build -t goverify-engine-ai:latest -f ai-service/Dockerfile ai-service/
-   # Push to your registry...
+   git clone https://github.com/vk1033/goverify-engine.git
+   cd goverify-engine
    ```
 
-2. **Install using Helm**:
+2. **Spin up the infrastructure**:
    ```bash
-   helm install goverify ./deploy/helm/goverify
+   docker-compose up -d
    ```
+   *This starts the API, Worker, AI Service, Kafka, Milvus, Redis, and the Observability stack.*
 
-3. **Verify Deployment**:
-   ```bash
-   kubectl get pods -l app=kyc-api
-   kubectl get pods -l app=kyc-worker
-   kubectl get pods -l app=kyc-ai
-   ```
+3. **Verify Health**:
+   - API: [http://localhost:8080/health](http://localhost:8080/health)
+   - Swagger: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
+   - Grafana: [http://localhost:3001](http://localhost:3001)
+
+---
+
+## 📖 API Reference
+
+Detailed API documentation is available via Swagger at `/swagger/index.html`.
+
+### Enrollment
+`POST /kyc/enroll`
+Registers a new identity with a photo and demographic data.
+
+### Verification
+`POST /kyc/verify`
+Performs a Re-KYC check against existing identities using biometric and semantic matching.
+
+### Search
+`GET /kyc/search`
+Query identities using metadata filters.
+
+---
+
+## 📊 Observability & Monitoring
+
+GoVerify is built for production reliability. Monitor your cluster using the following dashboards:
+
+- **Grafana**: Unified view of metrics, logs, and traces.
+- **Jaeger**: Trace requests across the API, Worker, and AI Service to find bottlenecks.
+- **Prometheus**: Real-time service metrics (request rates, error rates, processing latency).
+- **Loki**: Centralized log exploration.
+
+---
+
+## 🛡️ Security
+
+- **Data Privacy**: Sensitive demographic data is hashed using Argon2 and PII is encrypted at rest using AES-256 GCM.
+- **Authentication**: JWT-based secure access for all API endpoints.
+- **Resilience**: Kafka buffering ensures no identity data is lost even during high traffic or worker downtime.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
