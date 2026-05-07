@@ -88,7 +88,7 @@ services:
       - REDIS_ADDRESS=redis:6379
       - AI_SERVICE_URL=http://ai-service:5000
     ports:
-      - "9090:9090"
+      - "9095:9090"
     depends_on:
       - kafka
       - milvus-standalone
@@ -114,14 +114,14 @@ services:
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     ports:
-      - "16686:16686" # UI
-      - "4317:4317" # OTLP gRPC
+      - "16687:16686" # UI
+      - "4319:4317" # OTLP gRPC (Host:4319 -> Container:4317)
       - "4318:4318" # OTLP HTTP
 
   prometheus:
     image: prom/prometheus:latest
     volumes:
-      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./deploy/prometheus:/etc/prometheus
     ports:
       - "9091:9090"
     depends_on:
@@ -138,7 +138,7 @@ services:
       - ./deploy/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./deploy/grafana/dashboards:/etc/grafana/dashboards
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       - prometheus
       - loki
@@ -148,14 +148,14 @@ services:
     image: grafana/loki:latest
     ports:
       - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+    command: "-config.file=/etc/loki/local-config.yaml"
 
   promtail:
     image: grafana/promtail:latest
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./deploy/promtail/promtail-config.yml:/etc/promtail/config.yml
-    command: -config.file=/etc/promtail/config.yml
+      - ./deploy/promtail:/etc/promtail
+    command: "-config.file=/etc/promtail/promtail-config.yml"
     depends_on:
       - loki
