@@ -19,8 +19,6 @@ type ONNXService struct {
 	session      *onnxruntime_go.AdvancedSession
 	inputTensor  *onnxruntime_go.Tensor[float32]
 	outputTensor *onnxruntime_go.Tensor[float32]
-	inputName    string
-	outputName   string
 	mu           sync.Mutex
 }
 
@@ -81,8 +79,6 @@ func NewONNXService(modelPath string) (*ONNXService, error) {
 		session:      session,
 		inputTensor:  inputTensor,
 		outputTensor: outputTensor,
-		inputName:    inputNames[0],
-		outputName:   outputNames[0],
 	}, nil
 }
 
@@ -110,14 +106,17 @@ func (s *ONNXService) GenerateFaceEmbedding(photoBase64 string) ([]float32, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode image: %w", err)
 	}
+	fmt.Printf("Decoded image: %dx%d\n", img.Bounds().Dx(), img.Bounds().Dy())
 
 	tensorData := preprocessImage(img, 112, 112)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	inputData := s.inputTensor.GetData()
-	copy(inputData, tensorData)
+	copy(s.inputTensor.GetData(), tensorData)
+	if len(tensorData) > 10 {
+		fmt.Printf("Input tensor prefix for inference: %v\n", tensorData[:10])
+	}
 
 	err = s.session.Run()
 	if err != nil {
@@ -126,8 +125,11 @@ func (s *ONNXService) GenerateFaceEmbedding(photoBase64 string) ([]float32, erro
 
 	results := make([]float32, 512)
 	copy(results, s.outputTensor.GetData())
-
-	return normalize(results), nil
+	normalized := normalize(results)
+	if len(normalized) > 5 {
+		fmt.Printf("Generated embedding prefix: %v\n", normalized[:5])
+	}
+	return normalized, nil
 }
 
 func (s *ONNXService) GenerateNameEmbedding(name string) ([]float32, error) {

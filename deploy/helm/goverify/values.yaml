@@ -1,48 +1,64 @@
+# Global Settings
 replicaCount: 1
 
 image:
   repository: goverify-engine
   pullPolicy: IfNotPresent
-  # Overridden by tags in deployment
   tag: "latest"
 
 service:
   type: ClusterIP
   port: 8080
 
+# API Service (No AI logic, pure Go)
 api:
   name: kyc-api
   replicas: 2
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
   env:
-    ENVIRONMENT: development
+    ENVIRONMENT: production
     PORT: 8080
-    KAFKA_BROKERS: kafka:9092
-    MILVUS_ADDRESS: milvus:19530
-    REDIS_ADDRESS: redis:6379
+    KAFKA_BROKERS: kafka-svc:9092
+    MILVUS_ADDRESS: milvus-svc:19530
+    REDIS_ADDRESS: redis-svc:6379
 
+# Worker Service (Heavy AI Logic)
 worker:
   name: kyc-worker
   replicas: 3
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "1"
+      memory: 2Gi
   env:
-    ENVIRONMENT: development
-    KAFKA_BROKERS: kafka:9092
-    MILVUS_ADDRESS: milvus:19530
-    REDIS_ADDRESS: redis:6379
+    ENVIRONMENT: production
+    KAFKA_BROKERS: kafka-svc:9092
+    MILVUS_ADDRESS: milvus-svc:19530
+    REDIS_ADDRESS: redis-svc:6379
     ONNX_MODEL_PATH: "/models/mobilefacenet.onnx"
     ONNX_LIB_PATH: "/usr/lib/libonnxruntime.so"
 
-# Dependency configuration (placeholders for subcharts or external services)
-kafka:
+# Infrastructure toggle
+infra:
   enabled: true
-  host: kafka
-  port: 9092
 
-milvus:
+# Observability toggle
+observability:
   enabled: true
-  host: milvus
-  port: 19530
 
-redis:
-  enabled: true
-  host: redis
-  port: 6379
+# Ingress Settings
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: kyc.example.com

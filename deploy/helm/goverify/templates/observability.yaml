@@ -1,0 +1,126 @@
+{{- if .Values.observability.enabled -}}
+# Prometheus
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-svc
+spec:
+  ports:
+    - port: 9090
+  selector:
+    app: prometheus
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:latest
+          ports:
+            - containerPort: 9090
+---
+# Grafana
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-svc
+spec:
+  ports:
+    - port: 3000
+  selector:
+    app: grafana
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+spec:
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:latest
+          ports:
+            - containerPort: 3000
+---
+# Loki
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki-svc
+spec:
+  ports:
+    - port: 3100
+  selector:
+    app: loki
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+spec:
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      containers:
+        - name: loki
+          image: grafana/loki:latest
+          ports:
+            - containerPort: 3100
+          args: ["-config.file=/etc/loki/local-config.yaml"]
+---
+# Jaeger
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-svc
+spec:
+  ports:
+    - name: query
+      port: 16686
+    - name: collector
+      port: 4317
+  selector:
+    app: jaeger
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+spec:
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/all-in-one:1.45
+          ports:
+            - containerPort: 16686
+            - containerPort: 4317
+{{- end }}

@@ -28,9 +28,9 @@ type KYCService interface {
 
 const (
 	// Multi-modal Scoring Weights
-	WeightFace        = 0.50 // 50% Face Biometric
-	WeightName        = 0.30 // 30% Name Similarity
-	WeightDemographic = 0.20 // 20% Demographic Hash Match
+	WeightFace        = 0.70 // 70% Face Biometric
+	WeightName        = 0.20 // 20% Name Similarity
+	WeightDemographic = 0.10 // 10% Demographic Hash Match
 
 	// Thresholds
 	ThresholdMatch   = 0.85
@@ -147,6 +147,8 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 	}
 
 	// Calculate similarities from L2 distance
+	// For L2 distance on normalized vectors: dist = sqrt(2 - 2*cos_sim)
+	// Simple linear mapping for now: 1.0 - (dist / 2.0)
 	faceSimilarity := 1.0 - (float64(bestMatch.Score) / 2.0)
 	if faceSimilarity < 0 {
 		faceSimilarity = 0
@@ -170,7 +172,7 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 	}
 
 	explanation := fmt.Sprintf(
-		"Production Score: %.2f (Face: %.2f * %.1f + Name: %.2f * %.1f + Demo: %.1f * %.1f). Threshold for MATCH: %.2f",
+		"Biometric Match: %.2f (Face: %.2f * %.1f + Name: %.2f * %.1f + Demo: %.1f * %.1f). Match Threshold: %.2f",
 		finalScore, faceSimilarity, WeightFace, nameSimilarity, WeightName, demoScore, WeightDemographic, ThresholdMatch,
 	)
 

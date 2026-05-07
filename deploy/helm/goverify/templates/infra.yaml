@@ -1,7 +1,9 @@
+{{- if .Values.infra.enabled -}}
+# Redis
 apiVersion: v1
 kind: Service
 metadata:
-  name: redis
+  name: redis-svc
 spec:
   ports:
     - port: 6379
@@ -27,10 +29,11 @@ spec:
           ports:
             - containerPort: 6379
 ---
+# Kafka (Standalone KRaft)
 apiVersion: v1
 kind: Service
 metadata:
-  name: kafka
+  name: kafka-svc
 spec:
   ports:
     - port: 9092
@@ -55,14 +58,15 @@ spec:
           image: bashj79/kafka-kraft:latest
           env:
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: PLAINTEXT://kafka:9092
+              value: PLAINTEXT://kafka-svc:9092
           ports:
             - containerPort: 9092
 ---
+# Milvus Standalone
 apiVersion: v1
 kind: Service
 metadata:
-  name: milvus
+  name: milvus-svc
 spec:
   ports:
     - port: 19530
@@ -88,17 +92,17 @@ spec:
           command: ["/tini", "--", "milvus", "run", "standalone"]
           env:
             - name: ETCD_ENDPOINTS
-              value: etcd:2379
+              value: etcd-svc:2379
             - name: MINIO_ADDRESS
-              value: minio:9000
+              value: minio-svc:9000
           ports:
             - containerPort: 19530
 ---
-# Minimal Etcd for Milvus
+# Etcd (for Milvus)
 apiVersion: v1
 kind: Service
 metadata:
-  name: etcd
+  name: etcd-svc
 spec:
   ports:
     - port: 2379
@@ -121,13 +125,13 @@ spec:
       containers:
         - name: etcd
           image: quay.io/coreos/etcd:v3.5.5
-          command: ["etcd", "--advertise-client-urls", "http://etcd:2379", "--listen-client-urls", "http://0.0.0.0:2379"]
+          command: ["etcd", "--advertise-client-urls", "http://etcd-svc:2379", "--listen-client-urls", "http://0.0.0.0:2379"]
 ---
-# Minimal Minio for Milvus
+# Minio (for Milvus)
 apiVersion: v1
 kind: Service
 metadata:
-  name: minio
+  name: minio-svc
 spec:
   ports:
     - port: 9000
@@ -156,3 +160,4 @@ spec:
               value: minioadmin
             - name: MINIO_ROOT_PASSWORD
               value: minioadmin
+{{- end }}

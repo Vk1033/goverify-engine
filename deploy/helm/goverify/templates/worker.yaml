@@ -17,6 +17,9 @@ spec:
       containers:
         - name: {{ .Values.worker.name }}
           image: "{{ .Values.image.repository }}-worker:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
           env:
             - name: ENVIRONMENT
               value: {{ .Values.worker.env.ENVIRONMENT }}
