@@ -4,6 +4,7 @@ import json
 import time
 import sys
 import threading
+import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Configuration
@@ -12,6 +13,13 @@ CALLBACK_PORT = 9999
 # host.docker.internal works when running worker in Docker and listener on Host
 # If running both on Host, use localhost or 127.0.0.1
 CALLBACK_URL = f"http://host.docker.internal:{CALLBACK_PORT}/callback"
+
+# Base directory for images, relative to this script
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+IMAGE_DIR = os.path.join(SCRIPT_DIR, "../../testdata/images")
+
+def get_image_path(filename):
+    return os.path.join(IMAGE_DIR, filename)
 
 class CallbackHandler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -121,7 +129,7 @@ def run_suite():
     print("="*50)
 
     # Enroll Person 1
-    p1_txn = tester.enroll("p1a.png", "John Doe", "1990-01-01", "MALE")
+    p1_txn = tester.enroll(get_image_path("p1a.png"), "John Doe", "1990-01-01", "MALE")
     cb1 = tester.wait_for_callback(p1_txn)
     if cb1:
         print(f"  [+] Person 1 enrolled. Status: {cb1['status']}")
@@ -129,7 +137,7 @@ def run_suite():
         print("  [!] Timeout waiting for Person 1 enrollment callback")
 
     # Enroll Person 3
-    p3_txn = tester.enroll("p3a.jpg", "Alice Smith", "1985-05-20", "FEMALE")
+    p3_txn = tester.enroll(get_image_path("p3a.jpg"), "Alice Smith", "1985-05-20", "FEMALE")
     cb3 = tester.wait_for_callback(p3_txn)
     if cb3:
         print(f"  [+] Person 3 enrolled. Status: {cb3['status']}")
@@ -139,14 +147,14 @@ def run_suite():
     print("="*50)
 
     # Match Person 1 (p1a vs p1b)
-    v1_txn = tester.verify("p1b.png", "John Doe", "1990-01-01", "MALE")
+    v1_txn = tester.verify(get_image_path("p1b.png"), "John Doe", "1990-01-01", "MALE")
     v_cb1 = tester.wait_for_callback(v1_txn)
     if v_cb1:
         print(f"  [+] P1 Match Result: {v_cb1['status']} (Score: {v_cb1['confidence_score']:.4f})")
         print(f"      Details: Face Sim: {v_cb1['details']['face_similarity']:.4f}, Name Sim: {v_cb1['details']['name_similarity']:.4f}")
     
     # Match Person 3 (p3a vs p3b)
-    v3_txn = tester.verify("p3b.jpg", "Alice Smith", "1985-05-20", "FEMALE")
+    v3_txn = tester.verify(get_image_path("p3b.jpg"), "Alice Smith", "1985-05-20", "FEMALE")
     v_cb3 = tester.wait_for_callback(v3_txn)
     if v_cb3:
         print(f"  [+] P3 Match Result: {v_cb3['status']} (Score: {v_cb3['confidence_score']:.4f})")
@@ -156,7 +164,7 @@ def run_suite():
     print("="*50)
 
     # Mismatch (p1a vs p2a) - Person 1 name but Person 2 photo
-    v_mismatch_txn = tester.verify("p2a.png", "John Doe", "1990-01-01", "MALE")
+    v_mismatch_txn = tester.verify(get_image_path("p2a.png"), "John Doe", "1990-01-01", "MALE")
     v_cb_mismatch = tester.wait_for_callback(v_mismatch_txn)
     if v_cb_mismatch:
         print(f"  [+] Mismatch Result: {v_cb_mismatch['status']} (Score: {v_cb_mismatch['confidence_score']:.4f})")
@@ -168,7 +176,7 @@ def run_suite():
     print("="*50)
 
     # Right photo, wrong name
-    v_demo_txn = tester.verify("p1a.png", "Wrong Name", "1990-01-01", "MALE")
+    v_demo_txn = tester.verify(get_image_path("p1a.png"), "Wrong Name", "1990-01-01", "MALE")
     v_cb_demo = tester.wait_for_callback(v_demo_txn)
     if v_cb_demo:
         print(f"  [+] Demo Mismatch Result: {v_cb_demo['status']} (Score: {v_cb_demo['confidence_score']:.4f})")
