@@ -4,6 +4,7 @@ import cv2
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from insightface.app import FaceAnalysis
+from sentence_transformers import SentenceTransformer
 import logging
 
 # Configure logging
@@ -22,6 +23,11 @@ MIN_DET_SCORE = 0.6  # Minimum detection confidence
 VERIFY_THRESHOLD = 0.4  # Cosine similarity threshold for same-person
 EMBEDDING_DIM = 512  # Expected embedding dimension for buffalo_l
 
+# Initialize BERT for Name Embeddings
+logger.info("Loading BERT model: l3cube-pune/indic-sentence-bert-nli")
+name_model = SentenceTransformer('l3cube-pune/indic-sentence-bert-nli')
+NAME_EMBEDDING_DIM = 768
+
 
 class EmbeddingRequest(BaseModel):
     image_base64: str
@@ -30,6 +36,10 @@ class EmbeddingRequest(BaseModel):
 class VerifyRequest(BaseModel):
     img1_base64: str
     img2_base64: str
+
+
+class NameEmbeddingRequest(BaseModel):
+    text: str
 
 
 def decode_base64_image(base64_str: str):
@@ -141,6 +151,34 @@ async def get_embedding(request: EmbeddingRequest):
         raise
     except Exception as e:
         logger.exception("Unexpected error in /represent")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/represent-name")
+async def get_name_embedding(request: NameEmbeddingRequest):
+    try:
+        if not request.text or not request.text.strip():
+            raise HTTPException(status_code=400, detail="Text is required")
+
+        # Generate embedding
+        # encode() returns a numpy array
+        emb = name_model.encode(request.text).astype(np.float32)
+
+        if emb.shape[0] != NAME_EMBEDDING_DIM:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unexpected name embedding dimension: {emb.shape[0]}, expected {NAME_EMBEDDING_DIM}",
+            )
+
+        return {
+            "embedding": emb.tolist(),
+            "dim": NAME_EMBEDDING_DIM,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error in /represent-name")
         raise HTTPException(status_code=500, detail=str(e))
 
 

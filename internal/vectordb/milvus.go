@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	CollectionName = "kyc_identities_v17"
+	CollectionName = "kyc_identities_v18"
 	DimFace        = 512
 	DimName        = 768
 )
@@ -66,7 +66,7 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 		m.logger.Info().Str("name", CollectionName).Msg("Creating collection")
 		schema := &entity.Schema{
 			CollectionName: CollectionName,
-			Description:    "KYC Identity Records v11",
+			Description:    "KYC Identity Records v18",
 			AutoID:         true,
 			Fields: []*entity.Field{
 				{Name: "id", DataType: entity.FieldTypeInt64, PrimaryKey: true, AutoID: true},
@@ -77,6 +77,7 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 				{Name: "dob", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "128"}},
 				{Name: "gender", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "16"}},
 				{Name: "face_embedding", DataType: entity.FieldTypeFloatVector, TypeParams: map[string]string{"dim": fmt.Sprintf("%d", DimFace)}},
+				{Name: "name_embedding", DataType: entity.FieldTypeFloatVector, TypeParams: map[string]string{"dim": fmt.Sprintf("%d", DimName)}},
 			},
 		}
 
@@ -91,6 +92,11 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 		}
 		if err := m.client.CreateIndex(ctx, CollectionName, "face_embedding", idx, false); err != nil {
 			return fmt.Errorf("create face index failed: %w", err)
+		}
+
+		m.logger.Info().Str("collection", CollectionName).Msg("Creating name index")
+		if err := m.client.CreateIndex(ctx, CollectionName, "name_embedding", idx, false); err != nil {
+			return fmt.Errorf("create name index failed: %w", err)
 		}
 	}
 
@@ -120,7 +126,10 @@ func (m *MilvusClient) InsertIdentity(ctx context.Context, record *domain.Identi
 	genderCol := entity.NewColumnVarChar("gender", genders)
 	faceCol := entity.NewColumnFloatVector("face_embedding", DimFace, faceSigs)
 
-	_, err := m.client.Insert(ctx, CollectionName, "", idCol, hashCol, nameCol, blindCol, dobCol, genderCol, faceCol)
+	nameSigs := [][]float32{record.NameEmbedding}
+	nameEmbCol := entity.NewColumnFloatVector("name_embedding", DimName, nameSigs)
+
+	_, err := m.client.Insert(ctx, CollectionName, "", idCol, hashCol, nameCol, blindCol, dobCol, genderCol, faceCol, nameEmbCol)
 	if err != nil {
 		return fmt.Errorf("insert failed: %w", err)
 	}
@@ -141,7 +150,7 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 
 	// Search primarily by face
 	for i := 0; i < 2; i++ {
-		searchResult, err = m.client.Search(ctx, CollectionName, []string{}, "", []string{"transaction_id", "demographic_hash", "name", "dob", "gender"},
+		searchResult, err = m.client.Search(ctx, CollectionName, []string{}, "", []string{"transaction_id", "demographic_hash", "name", "dob", "gender", "name_embedding"},
 			[]entity.Vector{entity.FloatVector(faceEmbedding)}, "face_embedding", entity.L2, topK, sp)
 
 		if err == nil {
@@ -164,6 +173,7 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 	for _, res := range searchResult {
 		for i := 0; i < res.ResultCount; i++ {
 			var txnID, hash, name, dob, gender string
+			var nameEmb []float32
 
 			for _, field := range res.Fields {
 				switch field.Name() {
@@ -187,6 +197,10 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 					if v, ok := field.(*entity.ColumnVarChar); ok {
 						gender, _ = v.ValueByIdx(i)
 					}
+				case "name_embedding":
+					if v, ok := field.(*entity.ColumnFloatVector); ok {
+						nameEmb = v.Data()[i]
+					}
 				}
 			}
 
@@ -196,6 +210,7 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 				Name:            name,
 				DOB:             dob,
 				Gender:          gender,
+				NameEmbedding:   nameEmb,
 				Score:           res.Scores[i],
 			})
 		}

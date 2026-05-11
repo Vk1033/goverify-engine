@@ -65,12 +65,37 @@ func (p *PythonClient) GenerateFaceEmbedding(photoBase64 string) ([]float32, err
 	return normalize(result.Embedding), nil
 }
 
+type NameEmbeddingRequest struct {
+	Text string `json:"text"`
+}
+
 func (p *PythonClient) GenerateNameEmbedding(name string) ([]float32, error) {
-	// Character frequency vector as implemented in onnx.go previously
-	embedding := make([]float32, 768)
-	for _, char := range name {
-		idx := int(char) % 768
-		embedding[idx] += 1.0
+	reqBody := NameEmbeddingRequest{
+		Text: name,
 	}
-	return normalize(embedding), nil
+	b, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	resp, err := p.client.Post(fmt.Sprintf("%s/represent-name", p.baseURL), "application/json", bytes.NewBuffer(b))
+	if err != nil {
+		return nil, fmt.Errorf("failed to call AI service (/represent-name): %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp struct {
+			Detail string `json:"detail"`
+		}
+		json.NewDecoder(resp.Body).Decode(&errResp)
+		return nil, fmt.Errorf("AI service returned error (%d): %s", resp.StatusCode, errResp.Detail)
+	}
+
+	var result EmbeddingResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return normalize(result.Embedding), nil
 }

@@ -1,6 +1,7 @@
 import numpy as np
 import logging
 from insightface.app import FaceAnalysis
+from sentence_transformers import SentenceTransformer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -8,21 +9,25 @@ logger = logging.getLogger(__name__)
 def warmup():
     print("Warming up InsightFace models (buffalo_l)...")
     try:
-        # Initialize FaceAnalysis with the buffalo_l model pack
-        # This will trigger the download of the models (det_10g, land5, w600k, etc.)
+        # Initialize FaceAnalysis
         app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
         app.prepare(ctx_id=0, det_size=(640, 640))
         
-        # Create a dummy image to verify it works
+        # Create a dummy image
         img = np.zeros((640, 640, 3), dtype=np.uint8)
         app.get(img)
         
-        print("Warmup successful. All models downloaded and initialized.")
+        print("InsightFace warmup successful.")
     except Exception as e:
-        print(f"Warmup failed: {e}")
-        # We don't want to fail the build if it's just a network issue, 
-        # but for a production build it should probably fail.
-        # raise e 
+        print(f"InsightFace warmup failed: {e}")
+
+    print("Warming up BERT model (l3cube-pune/indic-sentence-bert-nli)...")
+    try:
+        # Initialize BERT model - this triggers download
+        SentenceTransformer('l3cube-pune/indic-sentence-bert-nli')
+        print("BERT warmup successful.")
+    except Exception as e:
+        print(f"BERT warmup failed: {e}")
 
 if __name__ == "__main__":
     warmup()

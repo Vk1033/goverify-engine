@@ -234,6 +234,22 @@ def run_suite():
         print(f"      Reason: {v_cb_v['details'].get('explanation', 'N/A')}")
 
     print("\n" + "=" * 50)
+    print("PHASE 8: SEMANTIC NAME MATCHING")
+    print("=" * 50)
+    # Test linguistic variation: "Johnathan Doe" should match "John Doe" semantically
+    # First enroll with "Johnathan Doe"
+    p2_txn = tester.enroll(get_image_path("p2a.png"), "Johnathan Doe", "1988-12-12", "MALE")
+    tester.wait_for_callback(p2_txn)
+    
+    # Verify with "John Doe" - Semantic match should be high
+    v_sem_txn = tester.verify(get_image_path("p2a.png"), "John Doe", "1988-12-12", "MALE")
+    v_cb_sem = tester.wait_for_callback(v_sem_txn)
+    if v_cb_sem:
+        print(f"  [+] Semantic Result: {v_cb_sem['status']} (Score: {v_cb_sem['confidence_score']:.4f})")
+        print(f"      Face: {v_cb_sem['details']['face_similarity']:.4f}, Name: {v_cb_sem['details']['name_similarity']:.4f}, Demo: {v_cb_sem['details']['demographic_match']}")
+        print(f"      Reason: {v_cb_sem['details'].get('explanation', 'N/A')}")
+
+    print("\n" + "=" * 50)
     print("TEST SUITE COMPLETED")
     print("=" * 50)
 

@@ -6,3 +6,4 @@ opencv-python-headless==4.9.0.80
 python-multipart==0.0.9
 pydantic==2.6.3
 numpy==1.26.4
+sentence-transformers==2.6.1

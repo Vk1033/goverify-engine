@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -193,7 +194,12 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 		faceSimilarity := 1.0 - (dist * dist / 2.0)
 		faceSimilarity = max(0.0, min(1.0, faceSimilarity)) // Clamp to [0, 1]
 
-		nameSimilarity := calculateStringSimilarity(req.Name, res.Name)
+		semanticSimilarity := calculateSemanticSimilarity(nameEmb, res.NameEmbedding)
+		syntacticSimilarity := calculateStringSimilarity(req.Name, res.Name)
+		
+		// Hybrid approach: Semantic (BERT) + Syntactic (Levenshtein)
+		// We take the best of both to handle both nicknames (semantic) and typos (syntactic)
+		nameSimilarity := max(semanticSimilarity, syntacticSimilarity)
 
 		composite := (faceSimilarity * WeightFace) + (nameSimilarity * WeightName) + (demoScore * WeightDemographic)
 
@@ -337,4 +343,21 @@ func normalizeNameTokens(name string) string {
 	tokens := strings.Fields(strings.ToLower(strings.TrimSpace(name)))
 	sort.Strings(tokens) // order-independent
 	return strings.Join(tokens, " ")
+}
+
+func calculateSemanticSimilarity(emb1, emb2 []float32) float64 {
+	if len(emb1) == 0 || len(emb2) == 0 || len(emb1) != len(emb2) {
+		return 0
+	}
+	var dotProduct, norm1, norm2 float64
+	for i := range emb1 {
+		dotProduct += float64(emb1[i] * emb2[i])
+		norm1 += float64(emb1[i] * emb1[i])
+		norm2 += float64(emb2[i] * emb2[i])
+	}
+	if norm1 == 0 || norm2 == 0 {
+		return 0
+	}
+	// Cosine Similarity
+	return dotProduct / (math.Sqrt(norm1) * math.Sqrt(norm2))
 }
