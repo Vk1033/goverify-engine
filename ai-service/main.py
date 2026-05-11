@@ -1,22 +1,21 @@
-import os
 import base64
 import numpy as np
 import cv2
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from deepface import DeepFace
+from insightface.app import FaceAnalysis
 import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="GoVerify AI Service")
+app = FastAPI(title="GoVerify AI Service (InsightFace)")
 
-# Model configuration
-MODEL_NAME = "Facenet512"
-DETECTOR_BACKEND = "retinaface"
-DISTANCE_METRIC = "cosine"
+# Initialize InsightFace
+# buffalo_l is the model pack that includes 512-dim embedding model
+face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+face_app.prepare(ctx_id=0, det_size=(640, 640))
 
 class EmbeddingRequest(BaseModel):
     image_base64: str
@@ -43,30 +42,27 @@ def decode_base64_image(base64_str: str):
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "model": MODEL_NAME}
+    return {"status": "ok", "library": "insightface", "model": "buffalo_l"}
 
 @app.post("/represent")
 async def get_embedding(request: EmbeddingRequest):
     try:
         img = decode_base64_image(request.image_base64)
         
-        # DeepFace.represent returns a list of dictionaries (one for each face found)
-        results = DeepFace.represent(
-            img_path=img,
-            model_name=MODEL_NAME,
-            detector_backend=DETECTOR_BACKEND,
-            enforce_detection=True,
-            align=True
-        )
+        faces = face_app.get(img)
         
-        if not results:
+        if not faces:
             raise HTTPException(status_code=400, detail="No face detected")
             
-        # Return the embedding of the first face found
-        embedding = results[0]["embedding"]
+        # Return the embedding of the first face found (highest score/size usually)
+        # InsightFace embeddings are already 512-dim float32
+        embedding = faces[0].normed_embedding.tolist()
+        
         return {"embedding": embedding}
         
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         logger.error(f"Error generating embedding: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -76,28 +72,36 @@ async def verify_faces(request: VerifyRequest):
         img1 = decode_base64_image(request.img1_base64)
         img2 = decode_base64_image(request.img2_base64)
         
-        result = DeepFace.verify(
-            img1_path=img1,
-            img2_path=img2,
-            model_name=MODEL_NAME,
-            detector_backend=DETECTOR_BACKEND,
-            distance_metric=DISTANCE_METRIC,
-        )
+        faces1 = face_app.get(img1)
+        faces2 = face_app.get(img2)
         
-        # Extract metrics as in user's reference
-        is_same_person = result["verified"]
-        distance = result["distance"]
-        similarity_percentage = (1 - distance) * 100
+        if not faces1 or not faces2:
+            raise HTTPException(status_code=400, detail="Face not detected in one or both images")
+        
+        emb1 = faces1[0].normed_embedding
+        emb2 = faces2[0].normed_embedding
+        
+        # Calculate cosine similarity (dot product for normalized vectors)
+        similarity = float(np.dot(emb1, emb2))
+        
+        # Distance is 1 - similarity for cosine
+        distance = 1.0 - similarity
+        
+        # Typical threshold for buffalo_l is around 0.4 for cosine similarity (or higher)
+        # But we'll return the metrics and let the caller decide
+        is_same_person = bool(similarity > 0.4)
         
         return {
             "verified": is_same_person,
             "distance": distance,
-            "similarity_score": similarity_percentage,
-            "model": MODEL_NAME,
-            "detector": DETECTOR_BACKEND
+            "similarity_score": similarity * 100,
+            "library": "insightface",
+            "model": "buffalo_l"
         }
         
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         logger.error(f"Error during verification: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

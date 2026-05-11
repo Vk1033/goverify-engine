@@ -2,7 +2,7 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies for OpenCV and DeepFace
+# Install system dependencies for OpenCV and InsightFace
 RUN apt-get update && apt-get install -y \
     libgl1 \
     libglib2.0-0 \
@@ -11,18 +11,17 @@ RUN apt-get update && apt-get install -y \
     libxrender-dev \
     libgomp1 \
     curl \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Pre-download models to avoid download at runtime
-# This is a bit tricky with DeepFace as it downloads on first use.
-# We can run a small script to trigger the download.
 COPY . .
 
 # Warm up the models (download them during build)
-# Using a dummy image to trigger download of retinaface and facenet512
+# Using a dummy image to trigger download of buffalo_l models
 RUN python warmup.py
 
 EXPOSE 5000
