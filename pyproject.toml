@@ -1,10 +1,12 @@
 [project]
 name = "goverify-engine"
 version = "0.1.0"
-description = "Add your description here"
+description = "GoVerify Engine - Identity Verification Platform"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "numpy>=2.4.4",
-    "requests>=2.33.1",
+    "requests>=2.31.0",
 ]
+
+[tool.uv]
+workspace = { members = ["ai-service"] }
