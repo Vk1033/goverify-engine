@@ -173,67 +173,65 @@ def run_suite():
     v1_txn = tester.verify(get_image_path("p1b.png"), "John Doe", "1990-01-01", "MALE")
     v_cb1 = tester.wait_for_callback(v1_txn)
     if v_cb1:
-        print(
-            f"  [+] P1 Match Result: {v_cb1['status']} (Score: {v_cb1['confidence_score']:.4f})"
-        )
-        print(
-            f"      Details: Face Sim: {v_cb1['details']['face_similarity']:.4f}, Name Sim: {v_cb1['details']['name_similarity']:.4f}"
-        )
+        print(f"  [+] P1 Result: {v_cb1['status']} (Score: {v_cb1['confidence_score']:.4f})")
+        print(f"      Face: {v_cb1['details']['face_similarity']:.4f}, Name: {v_cb1['details']['name_similarity']:.4f}, Demo: {v_cb1['details']['demographic_match']}")
+        print(f"      Reason: {v_cb1['details'].get('explanation', 'N/A')}")
 
     # Match Person 3 (p3a vs p3b)
-    v3_txn = tester.verify(
-        get_image_path("p3b.png"), "Alice Smith", "1985-05-20", "FEMALE"
-    )
+    v3_txn = tester.verify(get_image_path("p3b.png"), "Alice Smith", "1985-05-20", "FEMALE")
     v_cb3 = tester.wait_for_callback(v3_txn)
     if v_cb3:
-        print(
-            f"  [+] P3 Match Result: {v_cb3['status']} (Score: {v_cb3['confidence_score']:.4f})"
-        )
+        print(f"  [+] P3 Result: {v_cb3['status']} (Score: {v_cb3['confidence_score']:.4f})")
+        print(f"      Face: {v_cb3['details']['face_similarity']:.4f}, Name: {v_cb3['details']['name_similarity']:.4f}, Demo: {v_cb3['details']['demographic_match']}")
+        print(f"      Reason: {v_cb3['details'].get('explanation', 'N/A')}")
 
     print("\n" + "=" * 50)
     print("PHASE 3: VERIFICATION (MISMATCH)")
     print("=" * 50)
-
-    # Mismatch (p1a vs p2a) - Person 1 name but Person 2 photo
-    v_mismatch_txn = tester.verify(
-        get_image_path("p2a.png"), "John Doe", "1990-01-01", "MALE"
-    )
-    v_cb_mismatch = tester.wait_for_callback(v_mismatch_txn)
-    if v_cb_mismatch:
-        print(
-            f"  [+] Mismatch Result: {v_cb_mismatch['status']} (Score: {v_cb_mismatch['confidence_score']:.4f})"
-        )
-        if v_cb_mismatch.get("details", {}).get("explanation"):
-            print(f"      Reason: {v_cb_mismatch['details']['explanation']}")
+    # Mismatch (p1a vs p2a)
+    v_mismatch_txn = tester.verify(get_image_path("p2a.png"), "John Doe", "1990-01-01", "MALE")
+    v_cb_m = tester.wait_for_callback(v_mismatch_txn)
+    if v_cb_m:
+        print(f"  [+] Mismatch Result: {v_cb_m['status']} (Score: {v_cb_m['confidence_score']:.4f})")
+        print(f"      Face: {v_cb_m['details']['face_similarity']:.4f}, Name: {v_cb_m['details']['name_similarity']:.4f}, Demo: {v_cb_m['details']['demographic_match']}")
+        print(f"      Reason: {v_cb_m['details'].get('explanation', 'N/A')}")
 
     print("\n" + "=" * 50)
     print("PHASE 4: DEMOGRAPHIC MISMATCH")
     print("=" * 50)
-
-    # Right photo, wrong name
-    v_demo_txn = tester.verify(
-        get_image_path("p1b.png"), "Wrong Name", "1990-01-01", "MALE"
-    )
-    v_cb_demo = tester.wait_for_callback(v_demo_txn)
-    if v_cb_demo:
-        print(
-            f"  [+] Demo Mismatch Result: {v_cb_demo['status']} (Score: {v_cb_demo['confidence_score']:.4f})"
-        )
-        print(
-            f"      Details: Name Sim: {v_cb_demo['details']['name_similarity']:.4f}, Face Sim: {v_cb_demo['details']['face_similarity']:.4f}"
-        )
+    v_demo_txn = tester.verify(get_image_path("p1b.png"), "Wrong Name", "1990-01-01", "MALE")
+    v_cb_d = tester.wait_for_callback(v_demo_txn)
+    if v_cb_d:
+        print(f"  [+] Demo Result: {v_cb_d['status']} (Score: {v_cb_d['confidence_score']:.4f})")
+        print(f"      Face: {v_cb_d['details']['face_similarity']:.4f}, Name: {v_cb_d['details']['name_similarity']:.4f}, Demo: {v_cb_d['details']['demographic_match']}")
+        print(f"      Reason: {v_cb_d['details'].get('explanation', 'N/A')}")
 
     print("\n" + "=" * 50)
     print("PHASE 5: SEARCH")
     print("=" * 50)
-
     results = tester.search(name="John Doe")
-    if results is None:
-        print("  [!] Search returned None (unexpected)")
-    else:
-        print(f"  [+] Search for 'John Doe' found {len(results)} records")
-        for r in results:
-            print(f"      - {r['name']} ({r['gender']}) - TXN: {r['transaction_id']}")
+    if results:
+        print(f"  [+] Found {len(results)} records for 'John Doe'")
+
+    print("\n" + "=" * 50)
+    print("PHASE 6: NAME ORDER SWAP")
+    print("=" * 50)
+    v_swap_txn = tester.verify(get_image_path("p1b.png"), "Doe John", "1990-01-01", "MALE")
+    v_cb_s = tester.wait_for_callback(v_swap_txn)
+    if v_cb_s:
+        print(f"  [+] Swap Result: {v_cb_s['status']} (Score: {v_cb_s['confidence_score']:.4f})")
+        print(f"      Face: {v_cb_s['details']['face_similarity']:.4f}, Name: {v_cb_s['details']['name_similarity']:.4f}, Demo: {v_cb_s['details']['demographic_match']}")
+        print(f"      Reason: {v_cb_s['details'].get('explanation', 'N/A')}")
+
+    print("\n" + "=" * 50)
+    print("PHASE 7: IDENTITY SANITY CHECK")
+    print("=" * 50)
+    v_veto_txn = tester.verify(get_image_path("p3a.png"), "John Doe", "1990-01-01", "MALE")
+    v_cb_v = tester.wait_for_callback(v_veto_txn)
+    if v_cb_v:
+        print(f"  [+] Veto Result: {v_cb_v['status']} (Score: {v_cb_v['confidence_score']:.4f})")
+        print(f"      Face: {v_cb_v['details']['face_similarity']:.4f}, Name: {v_cb_v['details']['name_similarity']:.4f}, Demo: {v_cb_v['details']['demographic_match']}")
+        print(f"      Reason: {v_cb_v['details'].get('explanation', 'N/A')}")
 
     print("\n" + "=" * 50)
     print("TEST SUITE COMPLETED")

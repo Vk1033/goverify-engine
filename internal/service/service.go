@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -31,14 +32,17 @@ type KYCService interface {
 }
 
 const (
-	// Multi-modal Scoring Weights
+	// Multi-modal Scoring Weights (Balanced Calibration)
 	WeightFace        = 0.70 // 70% Face Biometric
 	WeightName        = 0.20 // 20% Name Similarity
 	WeightDemographic = 0.10 // 10% Demographic Hash Match
 
-	// Thresholds
-	ThresholdMatch   = 0.85
-	ThresholdPartial = 0.70
+	// Thresholds (Calibrated for Real-world variance)
+	ThresholdMatch   = 0.70
+	ThresholdPartial = 0.55
+
+	// Biometric Floor (Hard Veto)
+	BiometricFloor = 0.45
 )
 
 type serviceImpl struct {
@@ -151,11 +155,18 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 		}, nil
 	}
 
-	var bestMatch *domain.IdentityRecord
-	var bestDemographicMatch bool
+	type scoredResult struct {
+		record    *domain.IdentityRecord
+		score     float64
+		faceSim   float64
+		nameSim   float64
+		demoMatch bool
+	}
+
+	var best scoredResult
 
 	for _, res := range results {
-		// Decrypt name and dob for matching/logic if needed
+		// Decrypt name and dob for matching
 		decName, err := crypto.Decrypt(res.Name, s.cfg.Security.AESKey)
 		if err != nil {
 			s.logger.Error().Err(err).Str("txnID", txnID).Msg("Failed to decrypt name from DB")
@@ -170,66 +181,84 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 		}
 		res.DOB = decDOB
 
-		match, err := hash.CompareDemographicHash(req.DOB, req.Gender, res.DemographicHash)
-		if err == nil && match {
-			bestMatch = res
-			bestDemographicMatch = true
-			break
+		demoMatch, _ := hash.CompareDemographicHash(req.DOB, req.Gender, res.DemographicHash)
+		demoScore := 0.0
+		if demoMatch {
+			demoScore = 1.0
+		}
+
+		// Calculate similarities from L2 distance
+		// For L2 distance on normalized vectors: dist^2 = 2 - 2*cos_sim => cos_sim = 1 - (dist^2 / 2)
+		dist := float64(res.Score)
+		faceSimilarity := 1.0 - (dist * dist / 2.0)
+		faceSimilarity = max(0.0, min(1.0, faceSimilarity)) // Clamp to [0, 1]
+
+		nameSimilarity := calculateStringSimilarity(req.Name, res.Name)
+
+		composite := (faceSimilarity * WeightFace) + (nameSimilarity * WeightName) + (demoScore * WeightDemographic)
+
+		if composite > best.score {
+			best = scoredResult{
+				record:    res,
+				score:     composite,
+				faceSim:   faceSimilarity,
+				nameSim:   nameSimilarity,
+				demoMatch: demoMatch,
+			}
 		}
 	}
 
-	if bestMatch == nil {
-		bestMatch = results[0]
-	}
-
-	// Calculate similarities from L2 distance
-	// For L2 distance on normalized vectors: dist^2 = 2 - 2*cos_sim => cos_sim = 1 - (dist^2 / 2)
-	dist := float64(bestMatch.Score)
-	faceSimilarity := 1.0 - (dist * dist / 2.0)
-	if faceSimilarity < 0 {
-		faceSimilarity = 0
-	}
-
-	// Real string similarity for names (Levenshtein-based or simple overlap)
-	nameSimilarity := calculateStringSimilarity(req.Name, bestMatch.Name)
-
-	demoScore := 0.0
-	if bestDemographicMatch {
-		demoScore = 1.0
-	}
-
-	finalScore := (faceSimilarity * WeightFace) + (nameSimilarity * WeightName) + (demoScore * WeightDemographic)
-
-	// Biometric Safety Threshold: If face similarity is extremely low, it's a mismatch regardless of other data.
-	if faceSimilarity < 0.4 {
-		finalScore *= 0.5 // Heavy penalty for poor biometric match
+	// Biometric Safety Floor: Hard veto if face match is too poor
+	if best.faceSim < BiometricFloor {
+		s.logger.Warn().Str("txnID", txnID).Float64("faceSim", best.faceSim).Msg("Biometric veto: face similarity below floor")
+		return &domain.VerificationResult{
+			TransactionID:   txnID,
+			Status:          domain.StatusNoMatch,
+			ConfidenceScore: float32(best.score),
+			Details: domain.VerificationDetails{
+				FaceSimilarity: float32(best.faceSim),
+				Explanation:    fmt.Sprintf("Biometric veto: face similarity %.2f below floor %.2f", best.faceSim, BiometricFloor),
+			},
+			CreatedAt: time.Now(),
+		}, nil
 	}
 
 	status := domain.StatusNoMatch
-	if finalScore >= ThresholdMatch {
+	if best.score >= ThresholdMatch {
 		status = domain.StatusMatched
-	} else if finalScore >= ThresholdPartial {
+	} else if best.score >= ThresholdPartial {
 		status = domain.StatusPartial
 	}
 
+	// Identity Sanity Check: If face matches but name is a total mismatch,
+	// downgrade to Partial (Review Required) to prevent automated identity theft.
+	if status == domain.StatusMatched && best.nameSim < 0.3 {
+		s.logger.Warn().Str("txnID", txnID).Float64("nameSim", best.nameSim).Msg("Identity Sanity Check: High total score but low name similarity. Downgrading to Partial.")
+		status = domain.StatusPartial
+	}
+
+	demoScoreVal := 0.0
+	if best.demoMatch {
+		demoScoreVal = 1.0
+	}
 	explanation := fmt.Sprintf(
 		"Biometric Match: %.2f (Face: %.2f * %.1f + Name: %.2f * %.1f + Demo: %.1f * %.1f). Match Threshold: %.2f",
-		finalScore, faceSimilarity, WeightFace, nameSimilarity, WeightName, demoScore, WeightDemographic, ThresholdMatch,
+		best.score, best.faceSim, WeightFace, best.nameSim, WeightName, demoScoreVal, WeightDemographic, ThresholdMatch,
 	)
 
 	res := &domain.VerificationResult{
 		TransactionID:   txnID,
 		Status:          status,
-		ConfidenceScore: float32(finalScore),
+		ConfidenceScore: float32(best.score),
 		Details: domain.VerificationDetails{
-			FaceSimilarity:   float32(faceSimilarity),
-			NameSimilarity:   float32(nameSimilarity),
-			DemographicMatch: bestDemographicMatch,
+			FaceSimilarity:   float32(best.faceSim),
+			NameSimilarity:   float32(best.nameSim),
+			DemographicMatch: best.demoMatch,
 			Explanation:      explanation,
 		},
 		CreatedAt: time.Now(),
 	}
-	s.logger.Info().Ctx(ctx).Str("txnID", txnID).Str("status", string(res.Status)).Float64("final_score", finalScore).Msg("verification completed")
+	s.logger.Info().Ctx(ctx).Str("txnID", txnID).Str("status", string(res.Status)).Float64("final_score", best.score).Msg("verification completed")
 	return res, nil
 }
 
@@ -267,9 +296,10 @@ func (s *serviceImpl) SearchIdentities(ctx context.Context, name string, gender 
 }
 
 // calculateStringSimilarity returns a value between 0 and 1 using Levenshtein Distance.
+// It uses token sorting to be order-independent (e.g. "John Smith" == "Smith John").
 func calculateStringSimilarity(s1, s2 string) float64 {
-	s1 = strings.ToLower(strings.TrimSpace(s1))
-	s2 = strings.ToLower(strings.TrimSpace(s2))
+	s1 = normalizeNameTokens(s1)
+	s2 = normalizeNameTokens(s2)
 	if s1 == s2 {
 		return 1.0
 	}
@@ -293,25 +323,18 @@ func calculateStringSimilarity(s1, s2 string) float64 {
 			if s1[i-1] == s2[j-1] {
 				cost = 0
 			}
-			d[i][j] = min3(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+cost)
+			d[i][j] = min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+cost)
 		}
 	}
 
 	dist := d[len(s1)][len(s2)]
-	maxLen := len(s1)
-	if len(s2) > maxLen {
-		maxLen = len(s2)
-	}
+	maxLen := max(len(s1), len(s2))
 
 	return 1.0 - float64(dist)/float64(maxLen)
 }
 
-func min3(a, b, c int) int {
-	if a < b && a < c {
-		return a
-	}
-	if b < c {
-		return b
-	}
-	return c
+func normalizeNameTokens(name string) string {
+	tokens := strings.Fields(strings.ToLower(strings.TrimSpace(name)))
+	sort.Strings(tokens) // order-independent
+	return strings.Join(tokens, " ")
 }
