@@ -19,13 +19,16 @@ secrets:
 api:
   name: kyc-api
   replicas: 1
+  image:
+    repository: goverify-engine-kyc-api
+    tag: latest
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
-    requests:
       cpu: 200m
       memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
   env:
     ENVIRONMENT: production
     PORT: 8080
@@ -34,39 +37,46 @@ api:
     KAFKA_VERIFY_TOPIC: kyc_verify
     MILVUS_ADDRESS: milvus-svc:19530
     REDIS_ADDRESS: redis-svc:6379
-    AI_SERVICE_URL: http://kyc-ai:5000
+    AI_SERVICE_URL: http://kyc-ai-svc:5000
 
 # Worker Service
 worker:
   name: kyc-worker
   replicas: 1
+  image:
+    repository: goverify-engine-kyc-worker
+    tag: latest
   resources:
     limits:
-      cpu: "2"
-      memory: 4Gi
+      cpu: 500m
+      memory: 512Mi
     requests:
-      cpu: "1"
-      memory: 1Gi
+      cpu: 100m
+      memory: 128Mi
   env:
     ENVIRONMENT: production
+    PORT: 9090
     KAFKA_BROKERS: kafka-svc:9092
     KAFKA_ENROLL_TOPIC: kyc_enroll
     KAFKA_VERIFY_TOPIC: kyc_verify
     MILVUS_ADDRESS: milvus-svc:19530
     REDIS_ADDRESS: redis-svc:6379
-    AI_SERVICE_URL: http://kyc-ai:5000
+    AI_SERVICE_URL: http://kyc-ai-svc:5000
 
 # AI Service
 ai:
   name: kyc-ai
   replicas: 1
+  image:
+    repository: goverify-engine-ai-service
+    tag: latest
   resources:
     limits:
-      cpu: "2"
-      memory: 4Gi
-    requests:
-      cpu: "1"
+      cpu: 500m
       memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 256Mi
   env:
     ENVIRONMENT: production
     PORT: 5000
@@ -74,11 +84,20 @@ ai:
 # Infrastructure toggle
 infra:
   enabled: true
+  milvus:
+    image: milvusdb/milvus:v2.4.15
+  kafka:
+    messageMaxBytes: "10485760"
 
 # Observability Settings
 observability:
   enabled: true
   type: LoadBalancer
+  loki:
+    image: grafana/loki:latest
+  promtail:
+    enabled: true
+    image: grafana/promtail:latest
 
 # Ingress Settings
 ingress:

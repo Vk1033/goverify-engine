@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: {{ .Values.ai.name }}
-          image: "{{ .Values.image.repository }}-ai:{{ .Values.image.tag }}"
+          image: "{{ .Values.ai.image.repository }}:{{ .Values.ai.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.ai.env.PORT }}
@@ -43,7 +43,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.ai.name }}
+  name: {{ .Values.ai.name }}-svc
 spec:
   type: ClusterIP
   ports:

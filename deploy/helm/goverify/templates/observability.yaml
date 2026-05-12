@@ -1,4 +1,42 @@
 {{- if .Values.observability.enabled -}}
+# Prometheus Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 5s
+      evaluation_interval: 5s
+    scrape_configs:
+      - job_name: 'kyc-api'
+        static_configs:
+          - targets: ['{{ .Values.api.name }}:8080']
+      - job_name: 'kyc-worker'
+        static_configs:
+          - targets: ['{{ .Values.worker.name }}:9090']
+      - job_name: 'milvus'
+        static_configs:
+          - targets: ['milvus-svc:19530']
+---
+# Grafana Datasources
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-svc:9090
+        isDefault: true
+      - name: Loki
+        type: loki
+        url: http://loki-svc:3100
+---
 # Prometheus
 apiVersion: v1
 kind: Service
@@ -29,8 +67,337 @@ spec:
           image: prom/prometheus:latest
           ports:
             - containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
 ---
-# Grafana
+# Grafana Dashboard Providers
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-providers
+data:
+  providers.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'Default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+---
+# Grafana Dashboards
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+data:
+  kyc-dashboard.json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": "-- Grafana --",
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "gnetId": null,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null }
+                ]
+              }
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+          "id": 1,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+            "textMode": "auto"
+          },
+          "targets": [{ "expr": "sum(goverify_kyc_enrollments_total)", "refId": "A" }],
+          "title": "Total Enrollments",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null }
+                ]
+              }
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+          "id": 2,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+            "textMode": "auto"
+          },
+          "targets": [{ "expr": "sum(goverify_kyc_verifications_total)", "refId": "A" }],
+          "title": "Total Verifications",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "unit": "ms"
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+          "id": 10,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+            "textMode": "auto"
+          },
+          "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(goverify_kyc_verify_latency_ms_bucket[1m])) by (le))", "refId": "A" }],
+          "title": "Verify Latency (p95)",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "unit": "ms"
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+          "id": 11,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+            "textMode": "auto"
+          },
+          "targets": [{ "expr": "goverify_kafka_consumer_lag_ms{quantile=\"0.9\"}", "refId": "A" }],
+          "title": "Consumer Lag (p90)",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "unit": "ms"
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+          "id": 12,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+            "textMode": "auto"
+          },
+          "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(goverify_vectordb_search_latency_ms_bucket[1m])) by (le))", "refId": "A" }],
+          "title": "Vector Search (p95)",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "unit": "percent"
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+          "id": 13,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+            "textMode": "auto"
+          },
+          "targets": [{ "expr": "sum(rate(goverify_kyc_verifications_total{status=\"error\"}[5m])) / sum(rate(goverify_kyc_verifications_total[5m])) * 100", "refId": "A" }],
+          "title": "Error Rate",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2
+              },
+              "unit": "ms"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "id": 4,
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            { "expr": "histogram_quantile(0.50, sum(rate(goverify_kyc_verify_latency_ms_bucket[5m])) by (le))", "legendFormat": "p50", "refId": "A" },
+            { "expr": "histogram_quantile(0.95, sum(rate(goverify_kyc_verify_latency_ms_bucket[5m])) by (le))", "legendFormat": "p95", "refId": "B" },
+            { "expr": "histogram_quantile(0.99, sum(rate(goverify_kyc_verify_latency_ms_bucket[5m])) by (le))", "legendFormat": "p99", "refId": "C" }
+          ],
+          "title": "Verification Latency (Percentiles)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineWidth": 2
+              },
+              "unit": "ms"
+            }
+          },
+          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 4 },
+          "id": 5,
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "single" }
+          },
+          "targets": [
+            { "expr": "goverify_kafka_consumer_lag_ms{quantile=\"0.9\"}", "legendFormat": "Kafka Lag (p90)", "refId": "A" }
+          ],
+          "title": "Kafka Processing Lag",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineWidth": 2
+              },
+              "unit": "ms"
+            }
+          },
+          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 4 },
+          "id": 6,
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "single" }
+          },
+          "targets": [
+            { "expr": "histogram_quantile(0.95, sum(rate(goverify_vectordb_search_latency_ms_bucket[5m])) by (le))", "legendFormat": "Search Latency (p95)", "refId": "A" }
+          ],
+          "title": "Vector DB Search Latency",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" }
+            }
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+          "id": 7,
+          "options": {
+            "displayLabels": ["percent"],
+            "legend": { "displayMode": "list", "placement": "right" },
+            "pieType": "donut"
+          },
+          "targets": [{ "expr": "sum by (status) (goverify_kyc_verifications_total)", "legendFormat": "{{ "{{" }}status{{ "}}" }}", "refId": "A" }],
+          "title": "Match Distribution",
+          "type": "piechart"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }
+            }
+          },
+          "gridPos": { "h": 8, "w": 16, "x": 8, "y": 12 },
+          "id": 8,
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            { "expr": "rate(goverify_kyc_enrollments_total[1m])", "legendFormat": "Enrollment Rate", "refId": "A" },
+            { "expr": "rate(goverify_kyc_verifications_total[1m])", "legendFormat": "Verification Rate", "refId": "B" }
+          ],
+          "title": "Throughput (per min)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Loki",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 20 },
+          "id": 9,
+          "options": {
+            "enableLogDetails": true,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true
+          },
+          "targets": [{ "expr": "{container=~\"goverify-engine-kyc-.*\"}", "refId": "A" }],
+          "title": "System Logs (Loki)",
+          "type": "logs"
+        }
+      ],
+      "refresh": "5s",
+      "schemaVersion": 30,
+      "style": "dark",
+      "time": { "from": "now-15m", "to": "now" },
+      "title": "KYC Engine Observability",
+      "uid": "kyc_performance",
+      "version": 3
+    }
+---
+# Grafana Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -42,11 +409,13 @@ spec:
   selector:
     app: grafana
 ---
+# Grafana Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: grafana
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: grafana
@@ -60,6 +429,28 @@ spec:
           image: grafana/grafana:latest
           ports:
             - containerPort: 3000
+          env:
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: "Admin"
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: providers
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+      volumes:
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+        - name: providers
+          configMap:
+            name: grafana-dashboard-providers
+        - name: dashboards
+          configMap:
+            name: grafana-dashboards
 ---
 # Loki
 apiVersion: v1
@@ -87,10 +478,73 @@ spec:
     spec:
       containers:
         - name: loki
-          image: grafana/loki:latest
+          image: {{ .Values.observability.loki.image }}
           ports:
             - containerPort: 3100
           args: ["-config.file=/etc/loki/local-config.yaml"]
+---
+# Promtail
+{{- if .Values.observability.promtail.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+data:
+  promtail.yaml: |
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+    clients:
+      - url: http://loki-svc:3100/loki/api/v1/push
+    scrape_configs:
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_controller_name]
+            regex: ([0-9a-z-.]+?)(-[0-9a-f]{8,10})?
+            target_label: container
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: app
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - target_label: __path__
+            replacement: /var/log/pods/*$1/*.log
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promtail
+spec:
+  selector:
+    matchLabels:
+      app: promtail
+  template:
+    metadata:
+      labels:
+        app: promtail
+    spec:
+      containers:
+        - name: promtail
+          image: {{ .Values.observability.promtail.image }}
+          args:
+            - -config.file=/etc/promtail/promtail.yaml
+          volumeMounts:
+            - name: logs
+              mountPath: /var/log/pods
+              readOnly: true
+            - name: config
+              mountPath: /etc/promtail
+      volumes:
+        - name: logs
+          hostPath:
+            path: /var/log/pods
+        - name: config
+          configMap:
+            name: promtail-config
+{{- end }}
 ---
 # Jaeger
 apiVersion: v1
@@ -102,8 +556,10 @@ spec:
   ports:
     - name: query
       port: 16686
-    - name: collector
+    - name: collector-grpc
       port: 4317
+    - name: collector-http
+      port: 4318
   selector:
     app: jaeger
 ---
@@ -123,7 +579,11 @@ spec:
       containers:
         - name: jaeger
           image: jaegertracing/all-in-one:1.45
+          env:
+            - name: COLLECTOR_OTLP_ENABLED
+              value: "true"
           ports:
             - containerPort: 16686
             - containerPort: 4317
+            - containerPort: 4318
 {{- end }}

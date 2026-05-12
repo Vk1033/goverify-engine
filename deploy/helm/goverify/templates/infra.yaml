@@ -103,11 +103,11 @@ spec:
             - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
               value: "1"
             - name: KAFKA_MESSAGE_MAX_BYTES
-              value: "10485760"
+              value: {{ .Values.infra.kafka.messageMaxBytes | quote }}
             - name: KAFKA_REPLICA_FETCH_MAX_BYTES
-              value: "10485760"
+              value: {{ .Values.infra.kafka.messageMaxBytes | quote }}
             - name: KAFKA_SOCKET_REQUEST_MAX_BYTES
-              value: "10485760"
+              value: {{ .Values.infra.kafka.messageMaxBytes | quote }}
           ports:
             - containerPort: 9092
 ---
@@ -137,8 +137,15 @@ spec:
     spec:
       containers:
         - name: milvus
-          image: milvusdb/milvus:v2.2.8
+          image: {{ .Values.infra.milvus.image }}
           command: ["/tini", "--", "milvus", "run", "standalone"]
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
           env:
             - name: ETCD_ENDPOINTS
               value: etcd-svc:2379
@@ -174,7 +181,14 @@ spec:
       containers:
         - name: etcd
           image: quay.io/coreos/etcd:v3.5.5
-          command: ["etcd", "--advertise-client-urls", "http://etcd-svc:2379", "--listen-client-urls", "http://0.0.0.0:2379"]
+          command: ["etcd", "--advertise-client-urls", "http://etcd-svc:2379", "--listen-client-urls", "http://0.0.0.0:2379", "--data-dir", "/etcd"]
+          env:
+            - name: ETCD_AUTO_COMPACTION_MODE
+              value: "revision"
+            - name: ETCD_AUTO_COMPACTION_RETENTION
+              value: "1000"
+            - name: ETCD_QUOTA_BACKEND_BYTES
+              value: "4294967296"
 ---
 # Minio (for Milvus)
 apiVersion: v1
