@@ -33,6 +33,7 @@ build:
 	docker build -f deploy/Dockerfile.worker -t goverify-engine-kyc-worker:latest .
 	@echo "$(GREEN)✅ All images built successfully!$(NC)"
 
+
 deploy:
 	@echo "$(YELLOW)📦 Deploying to Kubernetes...$(NC)"
 	helm upgrade --install $(HELM_RELEASE_NAME) $(HELM_CHART_PATH) --namespace $(NAMESPACE)
