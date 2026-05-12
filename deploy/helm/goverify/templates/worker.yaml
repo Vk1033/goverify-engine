@@ -39,6 +39,10 @@ spec:
               value: {{ .Values.worker.env.REDIS_ADDRESS }}
             - name: AI_SERVICE_URL
               value: {{ .Values.worker.env.AI_SERVICE_URL }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.worker.env.OTEL_EXPORTER_OTLP_ENDPOINT }}
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: {{ .Values.worker.env.OTEL_EXPORTER_OTLP_INSECURE | quote }}
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:

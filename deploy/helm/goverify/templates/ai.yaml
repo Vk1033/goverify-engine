@@ -27,6 +27,10 @@ spec:
               value: {{ .Values.ai.env.ENVIRONMENT }}
             - name: PORT
               value: {{ .Values.ai.env.PORT | quote }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.ai.env.OTEL_EXPORTER_OTLP_ENDPOINT }}
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: {{ .Values.ai.env.OTEL_EXPORTER_OTLP_INSECURE | quote }}
           readinessProbe:
             httpGet:
               path: /health

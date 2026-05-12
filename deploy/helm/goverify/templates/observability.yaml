@@ -18,7 +18,7 @@ data:
           - targets: ['{{ .Values.worker.name }}:9090']
       - job_name: 'milvus'
         static_configs:
-          - targets: ['milvus-svc:19530']
+          - targets: ['milvus-svc:9091']
 ---
 # Grafana Datasources
 apiVersion: v1
@@ -33,9 +33,18 @@ data:
         type: prometheus
         url: http://prometheus-svc:9090
         isDefault: true
+        access: proxy
+        editable: true
       - name: Loki
         type: loki
         url: http://loki-svc:3100
+        access: proxy
+        editable: true
+      - name: Jaeger
+        type: jaeger
+        url: http://jaeger-svc:16686
+        access: proxy
+        editable: true
 ---
 # Prometheus
 apiVersion: v1
@@ -383,7 +392,7 @@ data:
             "sortOrder": "Descending",
             "wrapLogMessage": true
           },
-          "targets": [{ "expr": "{container=~\"goverify-engine-kyc-.*\"}", "refId": "A" }],
+          "targets": [{ "expr": "{container=~\"kyc-.*\"}", "refId": "A" }],
           "title": "System Logs (Loki)",
           "type": "logs"
         }
@@ -513,6 +522,40 @@ data:
           - target_label: __path__
             replacement: /var/log/pods/*$1/*.log
 ---
+---
+# Promtail RBAC
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: promtail-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: promtail-clusterrole
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - nodes/proxy
+      - services
+      - endpoints
+      - pods
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: promtail-clusterrolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: promtail-clusterrole
+subjects:
+  - kind: ServiceAccount
+    name: promtail-sa
+    namespace: default
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -526,6 +569,7 @@ spec:
       labels:
         app: promtail
     spec:
+      serviceAccountName: promtail-sa
       containers:
         - name: promtail
           image: {{ .Values.observability.promtail.image }}
@@ -556,10 +600,13 @@ spec:
   ports:
     - name: query
       port: 16686
+      targetPort: 16686
     - name: collector-grpc
       port: 4317
+      targetPort: 4317
     - name: collector-http
       port: 4318
+      targetPort: 4318
   selector:
     app: jaeger
 ---
@@ -586,4 +633,9 @@ spec:
             - containerPort: 16686
             - containerPort: 4317
             - containerPort: 4318
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 256Mi
 {{- end }}

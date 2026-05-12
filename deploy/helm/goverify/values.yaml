@@ -38,6 +38,8 @@ api:
     MILVUS_ADDRESS: milvus-svc:19530
     REDIS_ADDRESS: redis-svc:6379
     AI_SERVICE_URL: http://kyc-ai-svc:5000
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger-svc:4317
+    OTEL_EXPORTER_OTLP_INSECURE: "true"
 
 # Worker Service
 worker:
@@ -62,6 +64,8 @@ worker:
     MILVUS_ADDRESS: milvus-svc:19530
     REDIS_ADDRESS: redis-svc:6379
     AI_SERVICE_URL: http://kyc-ai-svc:5000
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger-svc:4317
+    OTEL_EXPORTER_OTLP_INSECURE: "true"
 
 # AI Service
 ai:
@@ -80,6 +84,8 @@ ai:
   env:
     ENVIRONMENT: production
     PORT: 5000
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger-svc:4317
+    OTEL_EXPORTER_OTLP_INSECURE: "true"
 
 # Infrastructure toggle
 infra:

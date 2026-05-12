@@ -27,6 +27,10 @@ spec:
               value: {{ .Values.api.env.ENVIRONMENT }}
             - name: PORT
               value: {{ .Values.api.env.PORT | quote }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.api.env.OTEL_EXPORTER_OTLP_ENDPOINT }}
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: {{ .Values.api.env.OTEL_EXPORTER_OTLP_INSECURE | quote }}
             - name: KAFKA_BROKERS
               value: {{ .Values.api.env.KAFKA_BROKERS }}
             - name: KAFKA_ENROLL_TOPIC
