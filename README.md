@@ -11,8 +11,8 @@
 
 ## 🚀 Key Features
 
-- **Biometric Identity**: DeepFace-powered facial embeddings (Facenet512) for high-precision matching.
-- **Semantic Verification**: Hybrid matching combining biometric similarity with syntactic (Levenshtein) name analysis.
+- **Biometric Identity**: InsightFace-powered facial embeddings (buffalo_l) for high-precision matching.
+- **Semantic Verification**: Hybrid matching combining biometric similarity with BERT-based semantic analysis and Levenshtein syntactic checks.
 - **Event-Driven Scaling**: Kafka-backed asynchronous processing to handle massive request spikes.
 - **Ultra-Fast Search**: Milvus Vector DB for sub-millisecond retrieval across millions of identities.
 - **Comprehensive Observability**: Native integration with Prometheus, Grafana, Jaeger, and Loki for full-stack visibility.
@@ -35,12 +35,14 @@ graph TD
     Kafka -->|Consume Task| Worker[KYC Worker]
     
     %% Processing
-    Worker -->|Biometric Requests| AI[AI Service]
-    subgraph "AI Microservice (Python)"
-        AI -->|Facenet512| FaceModel[Face Embedding Model]
+    Worker -->|Inference Requests| AI[AI Service]
+    subgraph "AI Microservice (Python/FastAPI)"
+        AI -->|InsightFace| FaceModel[Buffalo_L Embedding Model]
+        AI -->|S-BERT| NameModel[Indic-Sentence-BERT]
     end
     
     Worker -->|Syntactic Match| Lev[Levenshtein Similarity]
+    Worker -->|Semantic Match| BERT[BERT Name Embedding]
     
     %% Data Store
     Worker -->|Vector Search| Milvus[(Milvus Vector DB)]
@@ -75,10 +77,10 @@ graph TD
 | Category | Technology |
 | :--- | :--- |
 | **Core** | Golang 1.25, Python 3.10 |
-| **Frameworks** | Gin (Go), Flask (Python), Uber-fx |
+| **Frameworks** | Gin (Go), FastAPI (Python), Uber-fx |
 | **Messaging** | Apache Kafka |
 | **Databases** | Milvus (Vector), Redis (Cache/Status) |
-| **AI/ML** | DeepFace, Facenet512 |
+| **AI/ML** | InsightFace (Biometrics), BERT (Names) |
 | **Observability** | Prometheus, Grafana, Jaeger, Loki |
 | **Infrastructure** | Docker, Kubernetes, Helm |
 

@@ -9,9 +9,10 @@ The GoVerify Engine is a high-performance, asynchronous identity verification sy
 - **Swagger UI**: Interactive API documentation.
 
 ### 2. Processing Core
-- **KYC Worker (Go)**: The background engine that processes verification tasks. It coordinates between the AI service and the vector database. It also performs **Syntactic Name Matching** using Levenshtein distance.
-- **AI Service (Python/Flask)**: A specialized service for biometric heavy lifting.
-  - **DeepFace**: Generates high-fidelity face embeddings (Facenet512).
+- **KYC Worker (Go)**: The background engine that processes verification tasks. It coordinates between the AI service and the vector database. It performs **Hybrid Matching** using biometric similarity, syntactic distance (Levenshtein), and semantic similarity (BERT).
+- **AI Service (Python/FastAPI)**: A specialized service for biometric and semantic heavy lifting.
+  - **InsightFace**: Generates high-fidelity face embeddings (Buffalo_L).
+  - **S-BERT**: Generates semantic embeddings for names to handle variations and transliterations.
 
 ### 3. Data & Orchestration
 - **Kafka**: The message backbone. Ensures reliability and decoupling between API and Worker.
@@ -38,12 +39,14 @@ graph TD
     Kafka -->|Consume Task| Worker[KYC Worker]
     
     %% Processing
-    Worker -->|Biometric Requests| AI[AI Service]
-    subgraph "AI Microservice (Python)"
-        AI -->|Facenet512| FaceModel[Face Embedding Model]
+    Worker -->|Inference Requests| AI[AI Service]
+    subgraph "AI Microservice (Python/FastAPI)"
+        AI -->|InsightFace| FaceModel[Buffalo_L Embedding Model]
+        AI -->|S-BERT| NameModel[Indic-Sentence-BERT]
     end
     
     Worker -->|Syntactic Match| Lev[Levenshtein Similarity]
+    Worker -->|Semantic Match| BERT[BERT Name Embedding]
     
     %% Data Store
     Worker -->|Vector Search| Milvus[(Milvus Vector DB)]
@@ -77,9 +80,9 @@ graph TD
 2. **Acceptance**: The API validates the request, generates a `TransactionID`, stores the initial `PENDING` status in **Redis**, and pushes a message to **Kafka**.
 3. **Response**: The API immediately returns the `TransactionID` to the client.
 4. **Processing**: The **KYC Worker** picks up the message from Kafka.
-5. **Embedding**: The Worker calls the **AI Service** to generate a 512-dimensional vector for the face.
+5. **Embedding**: The Worker calls the **AI Service** to generate a 512-dimensional vector for the face and a 768-dimensional vector for the name.
 6. **Matching**: The Worker:
    - Queries **Milvus** to find candidates based on face similarity.
-   - Calculates **Syntactic Similarity** (Levenshtein) for names in-memory.
-   - Computes a final hybrid score (Biometric + Syntactic + Demographic).
+   - Calculates **Syntactic Similarity** (Levenshtein) and **Semantic Similarity** (BERT) for names.
+   - Computes a final hybrid score (Biometric + Syntactic + Semantic + Demographic).
 7. **Completion**: The Worker updates the transaction status in **Redis** and triggers a webhook callback to the **Client** with the final `VerificationResult`.
