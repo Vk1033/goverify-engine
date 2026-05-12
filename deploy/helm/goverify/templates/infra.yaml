@@ -26,6 +26,13 @@ spec:
       containers:
         - name: redis
           image: redis:7.0-alpine
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
           ports:
             - containerPort: 6379
 ---
@@ -56,6 +63,13 @@ spec:
       containers:
         - name: zookeeper
           image: confluentinc/cp-zookeeper:7.3.0
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           env:
             - name: ZOOKEEPER_CLIENT_PORT
               value: "2181"
@@ -86,9 +100,20 @@ spec:
       labels:
         app: kafka
     spec:
+      initContainers:
+        - name: wait-for-zookeeper
+          image: busybox:1.28
+          command: ['sh', '-c', 'until nc -z zookeeper-svc 2181; do echo waiting for zookeeper; sleep 2; done']
       containers:
         - name: kafka
           image: confluentinc/cp-kafka:7.3.0
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1
+              memory: 1Gi
           env:
             - name: KAFKA_BROKER_ID
               value: "1"
@@ -135,6 +160,13 @@ spec:
       labels:
         app: milvus
     spec:
+      initContainers:
+        - name: wait-for-etcd
+          image: busybox:1.28
+          command: ['sh', '-c', 'until nc -z etcd-svc 2379; do echo waiting for etcd; sleep 2; done']
+        - name: wait-for-minio
+          image: busybox:1.28
+          command: ['sh', '-c', 'until nc -z minio-svc 9000; do echo waiting for minio; sleep 2; done']
       containers:
         - name: milvus
           image: {{ .Values.infra.milvus.image }}
@@ -182,6 +214,13 @@ spec:
         - name: etcd
           image: quay.io/coreos/etcd:v3.5.5
           command: ["etcd", "--advertise-client-urls", "http://etcd-svc:2379", "--listen-client-urls", "http://0.0.0.0:2379", "--data-dir", "/etcd"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
           env:
             - name: ETCD_AUTO_COMPACTION_MODE
               value: "revision"
@@ -218,9 +257,17 @@ spec:
         - name: minio
           image: minio/minio:RELEASE.2023-03-20T20-16-18Z
           command: ["minio", "server", "/data"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           env:
             - name: MINIO_ROOT_USER
               value: minioadmin
             - name: MINIO_ROOT_PASSWORD
               value: minioadmin
+
 {{- end }}

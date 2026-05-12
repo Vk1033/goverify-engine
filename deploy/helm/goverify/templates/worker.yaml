@@ -14,7 +14,18 @@ spec:
       labels:
         app: {{ .Values.worker.name }}
     spec:
+      initContainers:
+        - name: wait-for-kafka
+          image: busybox:1.28
+          command: ['sh', '-c', 'until nc -z kafka-svc 9092; do echo waiting for kafka; sleep 2; done']
+        - name: wait-for-milvus
+          image: busybox:1.28
+          command: ['sh', '-c', 'until nc -z milvus-svc 19530; do echo waiting for milvus; sleep 2; done']
+        - name: wait-for-redis
+          image: busybox:1.28
+          command: ['sh', '-c', 'until nc -z redis-svc 6379; do echo waiting for redis; sleep 2; done']
       containers:
+
         - name: {{ .Values.worker.name }}
           image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
