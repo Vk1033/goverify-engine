@@ -123,6 +123,22 @@ We provide a professional `Makefile` to manage the entire lifecycle.
    make status
    ```
 
+---
+
+## 🔗 Service Endpoints
+
+Once deployed, access the system interfaces via the following local endpoints:
+
+| Service | Interface | URL |
+| :--- | :--- | :--- |
+| **KYC API** | Swagger Documentation | [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html) |
+| **Grafana** | Monitoring Dashboards | [http://localhost:3000](http://localhost:3000) |
+| **Jaeger** | Distributed Tracing | [http://localhost:16686](http://localhost:16686) |
+| **Prometheus** | Metric Explorer | [http://localhost:9090](http://localhost:9090) |
+
+*Note: If using Minikube or a remote cluster, replace `localhost` with your cluster's LoadBalancer IP.*
+
+
 
 ---
 
@@ -143,7 +159,7 @@ The included `Makefile` provides a standardized interface for common tasks:
 
 ## 📊 Observability & Monitoring
 
-GoVerify provides deep visibility into your identity cluster. Access the dashboards at `http://localhost:3001` (default):
+GoVerify provides deep visibility into your identity cluster. Access the dashboards at `http://localhost:3000` (default):
 
 - **Home Dashboard**: High-level overview of system health and throughput.
 - **K8s Cluster Dashboard**: Detailed resource usage for Kubernetes pods.
