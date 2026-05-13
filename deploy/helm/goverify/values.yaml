@@ -51,10 +51,10 @@ worker:
   resources:
     limits:
       cpu: 500m
-      memory: 512Mi
+      memory: 1Gi
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi
   env:
     ENVIRONMENT: production
     PORT: 9090
@@ -77,10 +77,10 @@ ai:
   resources:
     limits:
       cpu: 500m
-      memory: 1Gi
+      memory: 2Gi
     requests:
       cpu: 200m
-      memory: 256Mi
+      memory: 512Mi
   env:
     ENVIRONMENT: production
     PORT: 5000

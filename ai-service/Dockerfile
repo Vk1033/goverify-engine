@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 
 # Force CPU-only versions of Torch and ONNX Runtime to save ~2GB
 RUN pip install --no-cache-dir \
-    torch --index-url https://download.pytorch.org/whl/cpu \
+    torch --extra-index-url https://download.pytorch.org/whl/cpu \
     onnxruntime
 
 # Install project dependencies
@@ -46,8 +46,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # InsightFace models
 COPY --from=builder /root/.insightface /root/.insightface
 # HuggingFace/Sentence-Transformers models
-COPY --from=builder /root/.cache/torch /root/.cache/torch
-COPY --from=builder /root/.cache/huggingface /root/.cache/huggingface
+COPY --from=builder /root/.cache /root/.cache
 
 # Copy application code
 COPY . .

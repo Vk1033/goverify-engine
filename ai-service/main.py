@@ -25,7 +25,7 @@ EMBEDDING_DIM = 512  # Expected embedding dimension for buffalo_l
 
 # Initialize BERT for Name Embeddings
 logger.info("Loading BERT model: l3cube-pune/indic-sentence-bert-nli")
-name_model = SentenceTransformer('l3cube-pune/indic-sentence-bert-nli')
+name_model = SentenceTransformer("l3cube-pune/indic-sentence-bert-nli")
 NAME_EMBEDDING_DIM = 768
 
 
