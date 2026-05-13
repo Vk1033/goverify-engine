@@ -11,8 +11,10 @@
 
 ## 🚀 Key Features
 
-- **Biometric Identity**: InsightFace-powered facial embeddings (buffalo_l) for high-precision matching.
+- **Biometric Identity**: InsightFace-powered facial embeddings (`buffalo_l`) for high-precision matching.
 - **Semantic Verification**: Hybrid matching combining biometric similarity with BERT-based semantic analysis and Levenshtein syntactic checks.
+- **Production-Ready Deployment**: Automated Kubernetes orchestration via **Helm** with resource limits and health checks.
+- **Optimized AI Service**: Multi-stage Docker builds with pre-downloaded models for lightning-fast container startup.
 - **Event-Driven Scaling**: Kafka-backed asynchronous processing to handle massive request spikes.
 - **Ultra-Fast Search**: Milvus Vector DB for sub-millisecond retrieval across millions of identities.
 - **Comprehensive Observability**: Native integration with Prometheus, Grafana, Jaeger, and Loki for full-stack visibility.
@@ -76,7 +78,7 @@ graph TD
 
 | Category | Technology |
 | :--- | :--- |
-| **Core** | Golang 1.25, Python 3.10 |
+| **Core** | Golang 1.25, Python 3.12 |
 | **Frameworks** | Gin (Go), FastAPI (Python), Uber-fx |
 | **Messaging** | Apache Kafka |
 | **Databases** | Milvus (Vector), Redis (Cache/Status) |
@@ -90,11 +92,11 @@ graph TD
 
 ### Prerequisites
 
-- Docker & Docker Compose
-- Go 1.25+ (for local development)
-- Python 3.10+ (for AI service development)
+- **Docker & Docker Compose** (Local development)
+- **Kubernetes Cluster** & **Helm 3** (Production deployment)
+- **Go 1.25+** & **Python 3.12+**
 
-### Quick Start (Local Deployment)
+### Quick Start (Local Development)
 
 1. **Clone the repository**:
    ```bash
@@ -106,49 +108,57 @@ graph TD
    ```bash
    docker-compose up -d
    ```
-   *This starts the API, Worker, AI Service, Kafka, Milvus, Redis, and the Observability stack.*
+   *Starts API, Worker, AI Service, Kafka, Milvus, Redis, and Observability stack.*
 
-3. **Verify Health**:
-   - API: [http://localhost:8080/health](http://localhost:8080/health)
-   - Swagger: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
-   - Grafana: [http://localhost:3001](http://localhost:3001)
+### Production Deployment (Kubernetes)
+
+We provide a professional `Makefile` to manage the entire lifecycle:
+
+```bash
+# 1. Build optimized images (AI models pre-cached)
+make build
+
+# 2. Deploy to Kubernetes via Helm
+make deploy
+
+# 3. Check system status
+make status
+```
 
 ---
 
-## 📖 API Reference
+## 🛠️ Management & Automation
 
-Detailed API documentation is available via Swagger at `/swagger/index.html`.
+The included `Makefile` provides a standardized interface for common tasks:
 
-### Enrollment
-`POST /kyc/enroll`
-Registers a new identity with a photo and demographic data.
-
-### Verification
-`POST /kyc/verify`
-Performs a Re-KYC check against existing identities using biometric and semantic matching.
-
-### Search
-`GET /kyc/search`
-Query identities using metadata filters.
+| Command | Description |
+| :--- | :--- |
+| `make build` | Builds all Docker images (optimized for size and speed). |
+| `make deploy` | Installs/Upgrades the Helm chart and waits for system readiness. |
+| `make status` | Displays Kubernetes pod status and service endpoints. |
+| `make logs` | Tails the logs for the KYC API service. |
+| `make test` | Runs end-to-end validation of the AI service scoring. |
+| `make clean` | Uninstalls the Helm release. |
 
 ---
 
 ## 📊 Observability & Monitoring
 
-GoVerify is built for production reliability. Monitor your cluster using the following dashboards:
+GoVerify provides deep visibility into your identity cluster. Access the dashboards at `http://localhost:3001` (default):
 
-- **Grafana**: Unified view of metrics, logs, and traces.
-- **Jaeger**: Trace requests across the API, Worker, and AI Service to find bottlenecks.
-- **Prometheus**: Real-time service metrics (request rates, error rates, processing latency).
-- **Loki**: Centralized log exploration.
+- **Home Dashboard**: High-level overview of system health and throughput.
+- **K8s Cluster Dashboard**: Detailed resource usage for Kubernetes pods.
+- **Jaeger Tracing**: Trace verification requests across microservices to identify bottlenecks.
+- **Loki Logging**: Centralized log exploration for debugging and auditing.
 
 ---
 
-## 🛡️ Security
+## 🛡️ Security & Resilience
 
-- **Data Privacy**: Sensitive demographic data is hashed using Argon2 and PII is encrypted at rest using AES-256 GCM.
-- **Authentication**: JWT-based secure access for all API endpoints.
-- **Resilience**: Kafka buffering ensures no identity data is lost even during high traffic or worker downtime.
+- **AI Model Safety**: AI services use CPU-optimized versions of Torch and ONNX Runtime to ensure stability in resource-constrained environments.
+- **Data Privacy**: Sensitive demographic data is hashed using Argon2; PII is encrypted at rest using AES-256 GCM.
+- **Resilience**: `initContainers` in Helm ensure that critical infrastructure (Kafka, Milvus) is fully ready before application services start.
+- **Asynchronous Processing**: Kafka buffering ensures no identity data is lost during traffic spikes or worker maintenance.
 
 ---
 
@@ -159,3 +169,4 @@ We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
