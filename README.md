@@ -92,11 +92,14 @@ graph TD
 
 ### Prerequisites
 
-- **Docker & Docker Compose** (Local development)
-- **Kubernetes Cluster** & **Helm 3** (Production deployment)
-- **Go 1.25+** & **Python 3.12+**
+- **Kubernetes Cluster** (e.g., Docker Desktop K8s, Minikube, or GKE)
+- **Helm 3**
+- **Go 1.25+** & **Python 3.12+** (for local development)
+- **Docker** (to build images)
 
-### Quick Start (Local Development)
+### Deployment (Kubernetes)
+
+We provide a professional `Makefile` to manage the entire lifecycle.
 
 1. **Clone the repository**:
    ```bash
@@ -104,26 +107,22 @@ graph TD
    cd goverify-engine
    ```
 
-2. **Spin up the infrastructure**:
+2. **Build optimized images**:
    ```bash
-   docker-compose up -d
+   # AI models are pre-cached during build
+   make build
    ```
-   *Starts API, Worker, AI Service, Kafka, Milvus, Redis, and Observability stack.*
 
-### Production Deployment (Kubernetes)
+3. **Deploy to Kubernetes via Helm**:
+   ```bash
+   make deploy
+   ```
 
-We provide a professional `Makefile` to manage the entire lifecycle:
+4. **Verify System Status**:
+   ```bash
+   make status
+   ```
 
-```bash
-# 1. Build optimized images (AI models pre-cached)
-make build
-
-# 2. Deploy to Kubernetes via Helm
-make deploy
-
-# 3. Check system status
-make status
-```
 
 ---
 
