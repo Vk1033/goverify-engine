@@ -35,7 +35,7 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
         "textMode": "auto"
       },
-      "targets": [{ "expr": "sum(container_memory_usage_bytes{container!=\"\"}) / sum(kube_node_status_capacity{resource=\"memory\"}) * 100", "refId": "A" }],
+      "targets": [{ "expr": "sum(container_memory_usage_bytes{container!=\"\", container!=\"POD\"}) / sum(kube_node_status_capacity{resource=\"memory\"}) * 100", "refId": "A" }],
       "title": "Cluster Memory Saturation",
       "type": "stat"
     },
@@ -56,7 +56,7 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
         "textMode": "auto"
       },
-      "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) / sum(kube_node_status_capacity{resource=\"cpu\"}) * 100", "refId": "A" }],
+      "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\", container!=\"POD\"}[5m])) / sum(kube_node_status_capacity{resource=\"cpu\"}) * 100", "refId": "A" }],
       "title": "Cluster CPU Saturation",
       "type": "stat"
     },
@@ -118,9 +118,9 @@
         "tooltip": { "mode": "multi" }
       },
       "targets": [
-        { "expr": "container_memory_usage_bytes{container=~\"goverify-.*\"}", "legendFormat": "{{pod}}", "refId": "A" }
+        { "expr": "container_memory_usage_bytes{container!=\"\", container!=\"POD\"}", "legendFormat": "{{pod}} ({{container}})", "refId": "A" }
       ],
-      "title": "Memory Usage per Pod",
+      "title": "Memory Usage per Container",
       "type": "timeseries"
     },
     {
@@ -139,9 +139,9 @@
         "tooltip": { "mode": "multi" }
       },
       "targets": [
-        { "expr": "rate(container_cpu_usage_seconds_total{container=~\"goverify-.*\"}[5m])", "legendFormat": "{{pod}}", "refId": "A" }
+        { "expr": "rate(container_cpu_usage_seconds_total{container!=\"\", container!=\"POD\"}[5m])", "legendFormat": "{{pod}} ({{container}})", "refId": "A" }
       ],
-      "title": "CPU Usage per Pod",
+      "title": "CPU Usage per Container",
       "type": "timeseries"
     }
   ],
@@ -151,5 +151,5 @@
   "time": { "from": "now-30m", "to": "now" },
   "title": "Kubernetes Pod Health",
   "uid": "k8s_pods",
-  "version": 1
+  "version": 2
 }
