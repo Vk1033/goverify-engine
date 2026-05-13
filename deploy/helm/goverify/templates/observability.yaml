@@ -178,14 +178,22 @@ data:
   providers.yaml: |
     apiVersion: 1
     providers:
-      - name: 'Default'
+      - name: 'Applications'
         orgId: 1
-        folder: ''
+        folder: 'Applications'
         type: file
-        disableDeletion: false
-        editable: true
+        disableDeletion: true
+        editable: false
         options:
-          path: /var/lib/grafana/dashboards
+          path: /var/lib/grafana/dashboards/apps
+      - name: 'Infrastructure'
+        orgId: 1
+        folder: 'Infrastructure'
+        type: file
+        disableDeletion: true
+        editable: false
+        options:
+          path: /var/lib/grafana/dashboards/infra
 ---
 # Grafana Dashboards
 apiVersion: v1
@@ -193,6 +201,8 @@ kind: ConfigMap
 metadata:
   name: grafana-dashboards
 data:
+  home-dashboard.json: |
+{{ .Files.Get "dashboards/home-dashboard.json" | indent 4 }}
   kyc-dashboard.json: |
 {{ .Files.Get "dashboards/kyc-dashboard.json" | indent 4 }}
   go-runtime-dashboard.json: |
@@ -237,13 +247,32 @@ spec:
               value: "true"
             - name: GF_AUTH_ANONYMOUS_ORG_ROLE
               value: "Admin"
+            - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
+              value: "/var/lib/grafana/dashboards/apps/home-dashboard.json"
+            - name: GF_SECURITY_ALLOW_EMBEDDING
+              value: "true"
+            - name: GF_USERS_DEFAULT_THEME
+              value: "dark"
+            - name: GF_DATE_FORMATS_USE_BROWSER_LOCALE
+              value: "false"
+            - name: GF_DATE_FORMATS_FULL_DATE
+              value: "YYYY-MM-DD HH:mm:ss"
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
           volumeMounts:
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
             - name: providers
               mountPath: /etc/grafana/provisioning/dashboards
-            - name: dashboards
-              mountPath: /var/lib/grafana/dashboards
+            - name: dashboards-apps
+              mountPath: /var/lib/grafana/dashboards/apps
+            - name: dashboards-infra
+              mountPath: /var/lib/grafana/dashboards/infra
       volumes:
         - name: datasources
           configMap:
@@ -251,9 +280,22 @@ spec:
         - name: providers
           configMap:
             name: grafana-dashboard-providers
-        - name: dashboards
+        - name: dashboards-apps
           configMap:
             name: grafana-dashboards
+            items:
+              - key: home-dashboard.json
+                path: home-dashboard.json
+              - key: kyc-dashboard.json
+                path: kyc-dashboard.json
+              - key: go-runtime-dashboard.json
+                path: go-runtime-dashboard.json
+        - name: dashboards-infra
+          configMap:
+            name: grafana-dashboards
+            items:
+              - key: k8s-cluster-dashboard.json
+                path: k8s-cluster-dashboard.json
 ---
 # Loki
 apiVersion: v1

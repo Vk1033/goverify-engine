@@ -1,0 +1,149 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent"
+        }
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "textMode": "auto"
+      },
+      "targets": [{ "expr": "sum(container_memory_usage_bytes{container!=\"\", container!=\"POD\"}) / sum(kube_node_status_capacity{resource=\"memory\"}) * 100", "refId": "A" }],
+      "title": "Cluster Memory Saturation",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent"
+        }
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "textMode": "auto"
+      },
+      "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\", container!=\"POD\"}[5m])) / sum(kube_node_status_capacity{resource=\"cpu\"}) * 100", "refId": "A" }],
+      "title": "Cluster CPU Saturation",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent"
+        }
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "textMode": "auto"
+      },
+      "targets": [{ "expr": "sum(rate(goverify_kyc_verifications_total{status=\"error\"}[5m])) / sum(rate(goverify_kyc_verifications_total[5m])) * 100", "refId": "A" }],
+      "title": "KYC Success Rate",
+      "type": "stat"
+    },
+    {
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
+      "id": 4,
+      "title": "Quick Links",
+      "type": "row"
+    },
+    {
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 7 },
+      "id": 5,
+      "options": {
+        "content": "<div style=\"text-align: center; padding: 20px;\">\n  <h3>🚀 Applications</h3>\n  <p>Monitor KYC Engine & AI Performance</p>\n  <a class=\"btn btn-primary\" href=\"/d/kyc_performance\">View Dashboard</a>\n</div>",
+        "mode": "html"
+      },
+      "title": "",
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 7 },
+      "id": 6,
+      "options": {
+        "content": "<div style=\"text-align: center; padding: 20px;\">\n  <h3>🏗️ Infrastructure</h3>\n  <p>Pod Health & Resource Utilization</p>\n  <a class=\"btn btn-primary\" href=\"/d/k8s_pods\">View Dashboard</a>\n</div>",
+        "mode": "html"
+      },
+      "title": "",
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 7 },
+      "id": 7,
+      "options": {
+        "content": "<div style=\"text-align: center; padding: 20px;\">\n  <h3>🐹 Runtime</h3>\n  <p>Go Routines & Heap Analytics</p>\n  <a class=\"btn btn-primary\" href=\"/d/go_runtime\">View Dashboard</a>\n</div>",
+        "mode": "html"
+      },
+      "title": "",
+      "type": "text"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }
+        }
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 11 },
+      "id": 8,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        { "expr": "sum(rate(goverify_kyc_verifications_total[1m]))", "legendFormat": "KYC Matches/s", "refId": "A" },
+        { "expr": "sum(rate(http_requests_total{job=\"kyc-ai\"}[1m]))", "legendFormat": "AI Inference Rate", "refId": "B" }
+      ],
+      "title": "System Throughput",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 30,
+  "style": "dark",
+  "time": { "from": "now-15m", "to": "now" },
+  "title": "GoVerify Master Overview",
+  "uid": "home",
+  "version": 1
+}
