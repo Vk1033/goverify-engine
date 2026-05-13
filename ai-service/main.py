@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from insightface.app import FaceAnalysis
 from sentence_transformers import SentenceTransformer
+from prometheus_fastapi_instrumentator import Instrumentator
 import logging
 
 # Configure logging
@@ -12,6 +13,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="GoVerify AI Service (InsightFace)")
+
+# Initialize Prometheus Instrumentator
+Instrumentator().instrument(app).expose(app)
 
 # Initialize InsightFace
 # buffalo_l is the model pack that includes 512-dim embedding model

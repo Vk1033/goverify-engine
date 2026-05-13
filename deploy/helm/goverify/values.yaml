@@ -76,11 +76,11 @@ ai:
     tag: latest
   resources:
     limits:
-      cpu: 500m
-      memory: 2Gi
+      cpu: "1.0"
+      memory: 3Gi
     requests:
-      cpu: 200m
-      memory: 512Mi
+      cpu: 500m
+      memory: 1Gi
   env:
     ENVIRONMENT: production
     PORT: 5000

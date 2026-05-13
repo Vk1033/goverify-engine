@@ -13,6 +13,7 @@ dependencies = [
     "pydantic==2.6.3",
     "numpy==1.26.4",
     "sentence-transformers==2.6.1",
+    "prometheus-fastapi-instrumentator==7.0.0",
 ]
 
 [build-system]
