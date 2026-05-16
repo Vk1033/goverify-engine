@@ -37,6 +37,7 @@ graph TD
     Kafka -->|2. Consume| Worker[KYC Worker]
     
     %% Processing
+<<<<<<< HEAD
     Worker -->|3. Inference| AI[AI Microservice]
     subgraph "AI Microservice (Python/FastAPI)"
         AI -->|InsightFace| FaceModel[Face Embedding]
@@ -48,6 +49,17 @@ graph TD
         Worker -->|Semantic Similarity| Cosine[Cosine Score]
         Worker -->|Identity Security| AES[AES-GCM / Argon2]
     end
+=======
+    Worker -->|Inference Requests| AI[AI Microservice]
+    subgraph "AI Microservice (Python/FastAPI)"
+        AI -->|InsightFace| FaceModel[Face Embedding Model]
+        AI -->|S-BERT| NameModel[Name Embedding Model]
+    end
+    
+    %% Business Logic
+    Worker -->|Semantic Similarity| Cosine[Cosine Similarity]
+    Worker -->|Identity Security| AES[AES-GCM / Argon2]
+>>>>>>> a7a9b23 (docs: update architectural documentation and diagrams to reflect multi-modal verification and demographic hashing implementation.)
     
     %% Data Store
     Worker -->|4. Vector Search| Milvus[(Milvus Vector DB)]

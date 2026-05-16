@@ -13,6 +13,7 @@
 
 - **Biometric Identity**: InsightFace-powered facial embeddings (`buffalo_l`) for high-precision matching.
 - **Semantic Verification**: AI-driven name matching using BERT embeddings and multi-factor demographic hashing (Argon2).
+- **Semantic Verification**: AI-driven name matching using BERT embeddings and multi-factor demographic hashing (Argon2).
 - **Production-Ready Deployment**: Automated Kubernetes orchestration via **Helm** with resource limits and health checks.
 - **Optimized AI Service**: Multi-stage Docker builds with pre-downloaded models for lightning-fast container startup.
 - **Event-Driven Scaling**: Kafka-backed asynchronous processing to handle massive request spikes.
@@ -37,16 +38,10 @@ graph TD
     Kafka -->|2. Consume| Worker[KYC Worker]
     
     %% Processing
-    Worker -->|3. Inference| AI[AI Microservice]
+    Worker -->|Inference Requests| AI[AI Microservice]
     subgraph "AI Microservice (Python/FastAPI)"
-        AI -->|InsightFace| FaceModel[Face Embedding]
-        AI -->|S-BERT| NameModel[Name Embedding]
-    end
-    
-    %% Business Logic
-    subgraph "Go Processing Logic"
-        Worker -->|Semantic Similarity| Cosine[Cosine Score]
-        Worker -->|Identity Security| AES[AES-GCM / Argon2]
+        AI -->|InsightFace| FaceModel[Face Embedding Model]
+        AI -->|S-BERT| NameModel[Name Embedding Model]
     end
     
     %% Data Store
