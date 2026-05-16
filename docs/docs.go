@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/auth/login": {
             "post": {
-                "description": "Exchanges credentials for a JWT access token. (Mock: any username/password works)",
+                "description": "Exchanges credentials for a JWT access token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -48,6 +48,123 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Revokes the user's refresh token.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "description": "Obtains a new access token using a refresh token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh Token",
+                "parameters": [
+                    {
+                        "description": "Refresh Token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.AuthResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "description": "Creates a new user account.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register",
+                "parameters": [
+                    {
+                        "description": "Registration Data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -106,7 +223,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.KYCEnrollRequest"
+                            "$ref": "#/definitions/domain.KYCRequest"
                         }
                     }
                 ],
@@ -266,7 +383,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.KYCVerifyRequest"
+                            "$ref": "#/definitions/domain.KYCRequest"
                         }
                     }
                 ],
@@ -337,13 +454,44 @@ const docTemplate = `{
                 "access_token": {
                     "type": "string"
                 },
+                "refresh_token": {
+                    "type": "string"
+                },
                 "expires_in": {
                     "type": "integer",
-                    "example": 3600
+                    "example": 900
                 },
                 "token_type": {
                     "type": "string",
                     "example": "Bearer"
+                }
+            }
+        },
+        "domain.RefreshRequest": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "password123"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "admin"
                 }
             }
         },
@@ -373,36 +521,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.KYCEnrollRequest": {
-            "type": "object",
-            "required": [
-                "dob",
-                "gender",
-                "name",
-                "photo_base64"
-            ],
-            "properties": {
-                "callback_url": {
-                    "type": "string",
-                    "example": "http://client-service.local/webhook"
-                },
-                "dob": {
-                    "type": "string",
-                    "example": "1990-01-01"
-                },
-                "gender": {
-                    "type": "string",
-                    "example": "FEMALE"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "photo_base64": {
-                    "type": "string"
-                }
-            }
-        },
-        "domain.KYCVerifyRequest": {
+        "domain.KYCRequest": {
             "type": "object",
             "required": [
                 "dob",
@@ -461,6 +580,9 @@ const docTemplate = `{
                 },
                 "name_similarity": {
                     "type": "number"
+                },
+                "explanation": {
+                    "type": "string"
                 }
             }
         },

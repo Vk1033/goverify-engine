@@ -64,7 +64,7 @@ type IdentityRecord struct {
 // User represents a system user
 type User struct {
 	Username     string    `json:"username" example:"admin"`
-	PasswordHash string    `json:"-"`
+	PasswordHash string    `json:"password_hash"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 
