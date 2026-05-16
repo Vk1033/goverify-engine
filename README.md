@@ -12,7 +12,7 @@
 ## 🚀 Key Features
 
 - **Biometric Identity**: InsightFace-powered facial embeddings (`buffalo_l`) for high-precision matching.
-- **Semantic Verification**: Hybrid matching combining biometric similarity with BERT-based semantic analysis and Levenshtein syntactic checks.
+- **Semantic Verification**: AI-driven name matching using BERT embeddings and multi-factor demographic hashing (Argon2).
 - **Production-Ready Deployment**: Automated Kubernetes orchestration via **Helm** with resource limits and health checks.
 - **Optimized AI Service**: Multi-stage Docker builds with pre-downloaded models for lightning-fast container startup.
 - **Event-Driven Scaling**: Kafka-backed asynchronous processing to handle massive request spikes.
@@ -33,43 +33,33 @@ graph TD
     API -->|Auth/State| Redis[(Redis)]
     
     %% Orchestration
-    API -->|Push Task| Kafka{Kafka}
-    Kafka -->|Consume Task| Worker[KYC Worker]
+    API -->|1. Enqueue| Kafka{Kafka}
+    Kafka -->|2. Consume| Worker[KYC Worker]
     
     %% Processing
-    Worker -->|Inference Requests| AI[AI Service]
+    Worker -->|3. Inference| AI[AI Microservice]
     subgraph "AI Microservice (Python/FastAPI)"
-        AI -->|InsightFace| FaceModel[Buffalo_L Embedding Model]
-        AI -->|S-BERT| NameModel[Indic-Sentence-BERT]
+        AI -->|InsightFace| FaceModel[Face Embedding]
+        AI -->|S-BERT| NameModel[Name Embedding]
     end
     
-    Worker -->|Syntactic Match| Lev[Levenshtein Similarity]
-    Worker -->|Semantic Match| BERT[BERT Name Embedding]
+    %% Business Logic
+    subgraph "Go Processing Logic"
+        Worker -->|Semantic Similarity| Cosine[Cosine Score]
+        Worker -->|Identity Security| AES[AES-GCM / Argon2]
+    end
     
     %% Data Store
-    Worker -->|Vector Search| Milvus[(Milvus Vector DB)]
-    subgraph "Milvus Infrastructure"
-        Milvus --> MinIO[(MinIO)]
-        Milvus --> Etcd[(Etcd)]
-    end
+    Worker -->|4. Vector Search| Milvus[(Milvus Vector DB)]
     
     %% Status & Callbacks
-    Worker -->|Update Status| Redis
-    Worker -->|Callback| Client
+    Worker -->|5. Update Result| Redis
+    Worker -->|6. Callback| Client
     
     %% Observability
-    API -.->|Metrics| Prom[Prometheus]
-    Worker -.->|Metrics| Prom
-    
-    API -.->|Traces| Jaeger[Jaeger]
-    Worker -.->|Traces| Jaeger
-    
-    API -.->|Logs| Loki[Loki]
-    Worker -.->|Logs| Loki
-    
-    Prom --> Grafana[Grafana Unified Dashboard]
-    Jaeger --> Grafana
-    Loki --> Grafana
+    API -.->|Metrics/Traces| Prom[Prometheus / Jaeger]
+    Worker -.->|Metrics/Traces| Prom
+    Prom --> Grafana[Grafana]
 ```
 
 ---

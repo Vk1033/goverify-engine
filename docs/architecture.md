@@ -9,7 +9,7 @@ The GoVerify Engine is a high-performance, asynchronous identity verification sy
 - **Swagger UI**: Interactive API documentation.
 
 ### 2. Processing Core
-- **KYC Worker (Go)**: The background engine that processes verification tasks. It coordinates between the AI service and the vector database. It performs **Hybrid Matching** using biometric similarity, syntactic distance (Levenshtein), and semantic similarity (BERT).
+- **KYC Worker (Go)**: The background engine that processes verification tasks. It coordinates between the AI service and the vector database. It performs **Multi-modal Verification** using biometric similarity (Milvus), semantic similarity (BERT), and multi-factor demographic matching (Argon2).
 - **AI Service (Python/FastAPI)**: A specialized service for biometric and semantic heavy lifting.
   - **InsightFace**: Generates high-fidelity face embeddings (Buffalo_L).
   - **S-BERT**: Generates semantic embeddings for names to handle variations and transliterations.
@@ -18,13 +18,11 @@ The GoVerify Engine is a high-performance, asynchronous identity verification sy
 - **Kafka**: The message backbone. Ensures reliability and decoupling between API and Worker.
 - **Milvus**: A state-of-the-art vector database for high-dimensional similarity search.
 - **Redis**: Fast, in-memory storage for transaction status tracking and temporary state.
-- **MinIO**: Object storage used by Milvus for data persistence.
-- **Etcd**: Metadata storage for Milvus.
 
 ### 4. Observability
 - **Prometheus & Grafana**: Real-time metrics and dashboards.
 - **Jaeger**: Distributed tracing for identifying bottlenecks across microservices.
-- **Loki & Promtail**: Centralized log aggregation.
+- **Loki**: Centralized log aggregation.
 
 ## Architecture Diagram
 
@@ -35,43 +33,33 @@ graph TD
     API -->|Auth/State| Redis[(Redis)]
     
     %% Orchestration
-    API -->|Push Task| Kafka{Kafka}
-    Kafka -->|Consume Task| Worker[KYC Worker]
+    API -->|1. Enqueue| Kafka{Kafka}
+    Kafka -->|2. Consume| Worker[KYC Worker]
     
     %% Processing
-    Worker -->|Inference Requests| AI[AI Service]
+    Worker -->|3. Inference| AI[AI Microservice]
     subgraph "AI Microservice (Python/FastAPI)"
-        AI -->|InsightFace| FaceModel[Buffalo_L Embedding Model]
-        AI -->|S-BERT| NameModel[Indic-Sentence-BERT]
+        AI -->|InsightFace| FaceModel[Face Embedding]
+        AI -->|S-BERT| NameModel[Name Embedding]
     end
     
-    Worker -->|Syntactic Match| Lev[Levenshtein Similarity]
-    Worker -->|Semantic Match| BERT[BERT Name Embedding]
+    %% Business Logic
+    subgraph "Go Processing Logic"
+        Worker -->|Semantic Similarity| Cosine[Cosine Score]
+        Worker -->|Identity Security| AES[AES-GCM / Argon2]
+    end
     
     %% Data Store
-    Worker -->|Vector Search| Milvus[(Milvus Vector DB)]
-    subgraph "Milvus Infrastructure"
-        Milvus --> MinIO[(MinIO)]
-        Milvus --> Etcd[(Etcd)]
-    end
+    Worker -->|4. Vector Search| Milvus[(Milvus Vector DB)]
     
     %% Status & Callbacks
-    Worker -->|Update Status| Redis
-    Worker -->|Callback| Client
+    Worker -->|5. Update Result| Redis
+    Worker -->|6. Callback| Client
     
     %% Observability
-    API -.->|Metrics| Prom[Prometheus]
-    Worker -.->|Metrics| Prom
-    
-    API -.->|Traces| Jaeger[Jaeger]
-    Worker -.->|Traces| Jaeger
-    
-    API -.->|Logs| Loki[Loki]
-    Worker -.->|Logs| Loki
-    
-    Prom --> Grafana[Grafana Unified Dashboard]
-    Jaeger --> Grafana
-    Loki --> Grafana
+    API -.->|Metrics/Traces| Prom[Prometheus / Jaeger]
+    Worker -.->|Metrics/Traces| Prom
+    Prom --> Grafana[Grafana]
 ```
 
 ## Flow Description
@@ -83,6 +71,6 @@ graph TD
 5. **Embedding**: The Worker calls the **AI Service** to generate a 512-dimensional vector for the face and a 768-dimensional vector for the name.
 6. **Matching**: The Worker:
    - Queries **Milvus** to find candidates based on face similarity.
-   - Calculates **Syntactic Similarity** (Levenshtein) and **Semantic Similarity** (BERT) for names.
-   - Computes a final hybrid score (Biometric + Syntactic + Semantic + Demographic).
+   - Calculates **Semantic Similarity** (BERT) for names using cosine similarity.
+   - Computes a final hybrid score (Biometric + Semantic + Demographic Hash).
 7. **Completion**: The Worker updates the transaction status in **Redis** and triggers a webhook callback to the **Client** with the final `VerificationResult`.
