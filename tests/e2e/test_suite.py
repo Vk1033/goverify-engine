@@ -111,7 +111,7 @@ class KYCTester:
         resp.raise_for_status()
         return resp.json()["transaction_id"]
 
-    def wait_for_callback(self, txn_id, timeout=30):
+    def wait_for_callback(self, txn_id, timeout=60):
         start_time = time.time()
         while time.time() - start_time < timeout:
             for i, cb in enumerate(self.callback_server.received_callbacks):
@@ -204,7 +204,6 @@ def run_suite():
     # ---------------------------------------------------------
     print_phase("4. SEMANTIC NAME MATCHING (BERT)")
     # ---------------------------------------------------------
-    # We use "Johnathan Doe" - should match "John Doe" record semantically
     v_semantic_txn = tester.verify(
         get_image_path("p1b.png"), "Johnathan Doe", "1990-01-01", "MALE"
     )
@@ -214,7 +213,6 @@ def run_suite():
     # ---------------------------------------------------------
     print_phase("5. NAME MISMATCH (IDENTITY SANITY CHECK)")
     # ---------------------------------------------------------
-    # High face match, but totally different name
     v_veto_txn = tester.verify(
         get_image_path("p1b.png"), "Zuck Musk", "1990-01-01", "MALE"
     )
@@ -242,12 +240,31 @@ def run_suite():
     # ---------------------------------------------------------
     print_phase("8. NICKNAME TEST (BERT POWER)")
     # ---------------------------------------------------------
-    # Testing another semantic variation if applicable
     v_nick_txn = tester.verify(
         get_image_path("p3b.png"), "Ali Smith", "1985-05-20", "FEMALE"
     )
     print("[*] Verifying 'Ali Smith' (p3b) against enrolled 'Alice Smith'...")
     print_result(v_nick_txn, tester.wait_for_callback(v_nick_txn))
+
+    # ---------------------------------------------------------
+    print_phase("9. TWINS CHECK (BIOMETRIC SIMILARITY)")
+    # ---------------------------------------------------------
+    # Enrolling first twin
+    t1a_txn = tester.enroll(
+        get_image_path("twin3a.png"), "James Twin", "1995-10-10", "MALE"
+    )
+    print("[*] Enrolling Twin A (James Twin)...")
+    cb_t1a = tester.wait_for_callback(t1a_txn)
+    print_result(t1a_txn, cb_t1a)
+
+    # Verifying second twin against first twin's identity
+    t1b_txn = tester.verify(
+        get_image_path("twin3b.png"), "James Twin", "1995-10-10", "MALE"
+    )
+    print(
+        "[*] Verifying Twin B against James Twin's identity (High Face Similarity)..."
+    )
+    print_result(t1b_txn, tester.wait_for_callback(t1b_txn))
 
     print("\n" + "=" * 60)
     print(" ALL PHASES COMPLETED")

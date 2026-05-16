@@ -197,6 +197,16 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 
 		composite := (faceSimilarity * WeightFace) + (nameSimilarity * WeightName) + (demoScore * WeightDemographic)
 
+		s.logger.Debug().
+			Str("txnID", txnID).
+			Str("matchedTxnID", res.TransactionID).
+			Float64("milvusDistance", dist).
+			Float64("faceSim", faceSimilarity).
+			Float64("nameSim", nameSimilarity).
+			Bool("demoMatch", demoMatch).
+			Float64("composite", composite).
+			Msg("Evaluated candidate")
+
 		if composite > best.score {
 			best = scoredResult{
 				record:    res,
@@ -268,7 +278,7 @@ func (s *serviceImpl) SearchIdentities(ctx context.Context, name string, gender 
 	span.SetAttributes(attribute.String("name", name), attribute.String("gender", gender))
 
 	s.logger.Info().Ctx(ctx).Str("name", name).Str("gender", gender).Msg("searching identities")
-	
+
 	searchName := name
 	if name != "" {
 		hash := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(name))))

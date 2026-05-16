@@ -22,9 +22,8 @@ Instrumentator().instrument(app).expose(app)
 face_app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
 face_app.prepare(ctx_id=0, det_size=(640, 640))
 
-MIN_FACE_PX = 80  # Minimum face width/height in pixels
-MIN_DET_SCORE = 0.6  # Minimum detection confidence
-VERIFY_THRESHOLD = 0.4  # Cosine similarity threshold for same-person
+MIN_FACE_PX = 20  # Minimum face width/height in pixels (Relaxed for small faces)
+MIN_DET_SCORE = 0.4  # Minimum detection confidence (Relaxed for consistency)
 EMBEDDING_DIM = 512  # Expected embedding dimension for buffalo_l
 
 # Initialize BERT for Name Embeddings
@@ -73,17 +72,11 @@ def extract_best_face(faces, context: str = ""):
     Raises HTTPException with a descriptive message on failure.
     """
     if not faces:
-        raise HTTPException(
-            status_code=400,
-            detail=f"No face detected{' in ' + context if context else ''}",
-        )
+        return None
 
     valid_faces = [f for f in faces if f.det_score > MIN_DET_SCORE]
     if not valid_faces:
-        raise HTTPException(
-            status_code=400,
-            detail=f"No face met minimum confidence ({MIN_DET_SCORE}){' in ' + context if context else ''}",
-        )
+        return None
 
     # Filter by minimum pixel size — tiny faces produce unreliable embeddings
     sized_faces = [
@@ -93,15 +86,7 @@ def extract_best_face(faces, context: str = ""):
         and (f.bbox[3] - f.bbox[1]) >= MIN_FACE_PX
     ]
     if not sized_faces:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Face too small; minimum {MIN_FACE_PX}x{MIN_FACE_PX}px required{' in ' + context if context else ''}",
-        )
-
-    if len(sized_faces) > 1:
-        logger.warning(
-            f"{len(sized_faces)} valid faces detected{' in ' + context if context else ''}; selecting largest"
-        )
+        return None
 
     # Pick largest face by bounding box area — the subject in KYC is almost always the largest
     best = max(
@@ -138,8 +123,25 @@ def health_check():
 async def get_embedding(request: EmbeddingRequest):
     try:
         img = decode_base64_image(request.image_base64)
-        faces = face_app.get(img)
-        best_face = extract_best_face(faces)
+        
+        # Multi-scale detection loop for high robustness
+        best_face = None
+        # We try standard, then larger detection sizes for high-res images
+        for det_size in [(640, 640), (960, 960), (1280, 1280)]:
+            logger.info(f"Attempting face detection at scale {det_size}")
+            face_app.prepare(ctx_id=0, det_size=det_size)
+            faces = face_app.get(img)
+            best_face = extract_best_face(faces)
+            if best_face:
+                logger.info(f"Face found at scale {det_size} with score {best_face.det_score:.2f}")
+                break
+        
+        if not best_face:
+            raise HTTPException(
+                status_code=400,
+                detail="No suitable face detected after multi-scale scan"
+            )
+
         emb = get_embedding_from_face(best_face)
 
         face_w = int(best_face.bbox[2] - best_face.bbox[0])

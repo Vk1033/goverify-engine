@@ -15,10 +15,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-const (
-	StatusHealth = "HEALTHY"
-)
-
 var (
 	// HTTP Metrics
 	// Dashboard: rate(goverify_http_requests_total[5m])
