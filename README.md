@@ -14,6 +14,7 @@
 - **Biometric Identity**: InsightFace-powered facial embeddings (`buffalo_l`) for high-precision matching.
 - **Semantic Verification**: AI-driven name matching using BERT embeddings and multi-factor demographic hashing (Argon2).
 - **Semantic Verification**: AI-driven name matching using BERT embeddings and multi-factor demographic hashing (Argon2).
+- **Semantic Verification**: AI-driven name matching using BERT embeddings and multi-factor demographic hashing (Argon2).
 - **Production-Ready Deployment**: Automated Kubernetes orchestration via **Helm** with resource limits and health checks.
 - **Optimized AI Service**: Multi-stage Docker builds with pre-downloaded models for lightning-fast container startup.
 - **Event-Driven Scaling**: Kafka-backed asynchronous processing to handle massive request spikes.
@@ -34,27 +35,45 @@ graph TD
     API -->|Auth/State| Redis[(Redis)]
     
     %% Orchestration
-    API -->|1. Enqueue| Kafka{Kafka}
-    Kafka -->|2. Consume| Worker[KYC Worker]
+    API -->|Push Task| Kafka{Kafka}
+    Kafka -->|Consume Task| Worker[KYC Worker]
     
     %% Processing
+    Worker -->|Inference Requests| AI[AI Microservice]
     Worker -->|Inference Requests| AI[AI Microservice]
     subgraph "AI Microservice (Python/FastAPI)"
         AI -->|InsightFace| FaceModel[Face Embedding Model]
         AI -->|S-BERT| NameModel[Name Embedding Model]
     end
     
+    %% %% Business Logic
+    %% Worker -->|Semantic Similarity| Cosine[Cosine Similarity]
+    %% Worker -->|Identity Security| AES[AES-GCM / Argon2]
+    
     %% Data Store
-    Worker -->|4. Vector Search| Milvus[(Milvus Vector DB)]
+    Worker -->|Vector Search| Milvus[(Milvus Vector DB)]
+    subgraph "Milvus Infrastructure"
+        Milvus --> MinIO[(MinIO)]
+        Milvus --> Etcd[(Etcd)]
+    end
     
     %% Status & Callbacks
-    Worker -->|5. Update Result| Redis
-    Worker -->|6. Callback| Client
+    Worker -->|Update Status| Redis
+    Worker -->|Callback| Client
     
     %% Observability
-    API -.->|Metrics/Traces| Prom[Prometheus / Jaeger]
-    Worker -.->|Metrics/Traces| Prom
-    Prom --> Grafana[Grafana]
+    API -.->|Metrics| Prom[Prometheus]
+    Worker -.->|Metrics| Prom
+    
+    API -.->|Traces| Jaeger[Jaeger]
+    Worker -.->|Traces| Jaeger
+    
+    API -.->|Logs| Loki[Loki]
+    Worker -.->|Logs| Loki
+    
+    Prom --> Grafana[Grafana Unified Dashboard]
+    Jaeger --> Grafana
+    Loki --> Grafana
 ```
 
 ---
