@@ -40,7 +40,6 @@ graph TD
     
     %% Processing
     Worker -->|Inference Requests| AI[AI Microservice]
-    Worker -->|Inference Requests| AI[AI Microservice]
     subgraph "AI Microservice (Python/FastAPI)"
         AI -->|InsightFace| FaceModel[Face Embedding Model]
         AI -->|S-BERT| NameModel[Name Embedding Model]
