@@ -216,8 +216,10 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 			Status:          domain.StatusNoMatch,
 			ConfidenceScore: float32(best.score),
 			Details: domain.VerificationDetails{
-				FaceSimilarity: float32(best.faceSim),
-				Explanation:    fmt.Sprintf("Biometric veto: face similarity %.2f below floor %.2f", best.faceSim, BiometricFloor),
+				FaceSimilarity:   float32(best.faceSim),
+				NameSimilarity:   float32(best.nameSim),
+				DemographicMatch: best.demoMatch,
+				Explanation:      fmt.Sprintf("Biometric veto: face similarity %.2f below floor %.2f", best.faceSim, BiometricFloor),
 			},
 			CreatedAt: time.Now(),
 		}, nil

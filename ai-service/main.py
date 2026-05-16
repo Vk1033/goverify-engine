@@ -45,6 +45,11 @@ class NameEmbeddingRequest(BaseModel):
     text: str
 
 
+class IdentityEmbeddingRequest(BaseModel):
+    image_base64: str
+    name: str
+
+
 def decode_base64_image(base64_str: str):
     """Decode a base64-encoded image string to a cv2 BGR image."""
     try:
@@ -188,6 +193,66 @@ async def get_name_embedding(request: NameEmbeddingRequest):
     except Exception as e:
         logger.exception("Unexpected error in /represent-name")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/represent-identity")
+async def represent_identity(request: IdentityEmbeddingRequest):
+    """
+    Unified endpoint for generating both Face and Name embeddings.
+    Uses threading to run both model inferences in parallel.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    results = {}
+    errors = []
+
+    def run_face():
+        try:
+            img = decode_base64_image(request.image_base64)
+            best_face = None
+            # Multi-scale detection
+            for det_size in [(640, 640), (960, 960), (1280, 1280)]:
+                face_app.prepare(ctx_id=0, det_size=det_size)
+                faces = face_app.get(img)
+                best_face = extract_best_face(faces)
+                if best_face:
+                    break
+            
+            if not best_face:
+                errors.append("No face detected")
+                return
+
+            results["face_embedding"] = get_embedding_from_face(best_face).tolist()
+        except Exception as e:
+            logger.exception("Face embedding failed")
+            errors.append(f"Face error: {str(e)}")
+
+    def run_name():
+        try:
+            if not request.name or not request.name.strip():
+                errors.append("Name is required")
+                return
+            emb = name_model.encode(request.name).astype(np.float32)
+            results["name_embedding"] = emb.tolist()
+        except Exception as e:
+            logger.exception("Name embedding failed")
+            errors.append(f"Name error: {str(e)}")
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        executor.submit(run_face)
+        executor.submit(run_name)
+
+    if errors:
+        # If we have both missing, it's a hard error
+        if "face_embedding" not in results and "name_embedding" not in results:
+            raise HTTPException(status_code=400, detail="; ".join(errors))
+        # If one is missing, we still return but with warning in logs
+        logger.warning(f"Partial identity representation: {errors}")
+
+    return {
+        "face_embedding": results.get("face_embedding", []),
+        "name_embedding": results.get("name_embedding", []),
+    }
 
 
 if __name__ == "__main__":
