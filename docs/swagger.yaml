@@ -9,6 +9,10 @@ definitions:
       transaction_id:
         type: string
     type: object
+    required:
+    - password
+    - username
+    type: object
   domain.AuthRequest:
     properties:
       password:
@@ -25,12 +29,33 @@ definitions:
     properties:
       access_token:
         type: string
+      refresh_token:
+        type: string
       expires_in:
-        example: 3600
+        example: 900
         type: integer
       token_type:
         example: Bearer
         type: string
+    type: object
+  domain.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  domain.RegisterRequest:
+    properties:
+      password:
+        example: password123
+        type: string
+      username:
+        example: admin
+        type: string
+    required:
+    - password
+    - username
     type: object
   domain.IdentityRecord:
     properties:
@@ -140,8 +165,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: 'Exchanges credentials for a JWT access token. (Mock: any username/password
-        works)'
+      description: Exchanges credentials for a JWT access token.
       parameters:
       - description: Login Credentials
         in: body
@@ -163,6 +187,81 @@ paths:
               type: string
             type: object
       summary: Login
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Revokes the user's refresh token.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Logout
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Obtains a new access token using a refresh token.
+      parameters:
+      - description: Refresh Token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.AuthResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Refresh Token
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account.
+      parameters:
+      - description: Registration Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register
       tags:
       - auth
   /health:

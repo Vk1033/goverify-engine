@@ -15,12 +15,12 @@ type KYCRequest struct {
 type TransactionStatus string
 
 const (
-	StatusPending   TransactionStatus = "PENDING"
-	StatusMatched   TransactionStatus = "MATCHED"
-	StatusPartial   TransactionStatus = "PARTIAL_MATCH"
-	StatusNoMatch   TransactionStatus = "NO_MATCH"
-	StatusError     TransactionStatus = "ERROR"
-	StatusSuccess   TransactionStatus = "SUCCESS"
+	StatusPending TransactionStatus = "PENDING"
+	StatusMatched TransactionStatus = "MATCHED"
+	StatusPartial TransactionStatus = "PARTIAL_MATCH"
+	StatusNoMatch TransactionStatus = "NO_MATCH"
+	StatusError   TransactionStatus = "ERROR"
+	StatusSuccess TransactionStatus = "SUCCESS"
 )
 
 // AsyncResponse is the immediate response given to the client
@@ -32,11 +32,11 @@ type AsyncResponse struct {
 
 // VerificationResult is the final output of the verification process
 type VerificationResult struct {
-	TransactionID   string            `json:"transaction_id"`
-	Status          TransactionStatus `json:"status"`
-	ConfidenceScore float32           `json:"confidence_score"`
+	TransactionID   string              `json:"transaction_id"`
+	Status          TransactionStatus   `json:"status"`
+	ConfidenceScore float32             `json:"confidence_score"`
 	Details         VerificationDetails `json:"details"`
-	CreatedAt       time.Time         `json:"created_at"`
+	CreatedAt       time.Time           `json:"created_at"`
 }
 
 type VerificationDetails struct {
@@ -63,7 +63,7 @@ type IdentityRecord struct {
 
 // User represents a system user
 type User struct {
-	Username     string    `json:"username"`
+	Username     string    `json:"username" example:"admin"`
 	PasswordHash string    `json:"-"`
 	CreatedAt    time.Time `json:"created_at"`
 }
@@ -71,7 +71,7 @@ type User struct {
 // RegisterRequest represents the user registration request
 type RegisterRequest struct {
 	Username string `json:"username" binding:"required" example:"admin"`
-	Password string `json:"password" binding:"required" min:"8" example:"password123"`
+	Password string `json:"password" binding:"required" example:"password123"`
 }
 
 // AuthRequest represents the login request
