@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	CollectionName = "kyc_identities_v18"
+	CollectionFace = "face_embeddings"
+	CollectionName = "name_embeddings"
 	DimFace        = 512
 	DimName        = 768
 )
@@ -48,25 +49,26 @@ func NewMilvusClient(cfg *config.Config, logger *zerolog.Logger) (Client, error)
 	}
 
 	if err := mc.initCollection(ctx); err != nil {
-		logger.Error().Err(err).Msg("Failed to initialize milvus collection")
+		logger.Error().Err(err).Msg("Failed to initialize milvus collections")
 	} else {
-		logger.Info().Str("collection", CollectionName).Msg("Milvus collection initialized and loaded")
+		logger.Info().Str("face_collection", CollectionFace).Str("name_collection", CollectionName).Msg("Milvus collections initialized and loaded")
 	}
 
 	return mc, nil
 }
 
 func (m *MilvusClient) initCollection(ctx context.Context) error {
-	has, err := m.client.HasCollection(ctx, CollectionName)
+	// Initialize Face Collection
+	hasFace, err := m.client.HasCollection(ctx, CollectionFace)
 	if err != nil {
-		return fmt.Errorf("has collection check failed: %w", err)
+		return fmt.Errorf("has face collection check failed: %w", err)
 	}
 
-	if !has {
-		m.logger.Info().Str("name", CollectionName).Msg("Creating collection")
+	if !hasFace {
+		m.logger.Info().Str("name", CollectionFace).Msg("Creating face collection")
 		schema := &entity.Schema{
-			CollectionName: CollectionName,
-			Description:    "KYC Identity Records v18",
+			CollectionName: CollectionFace,
+			Description:    "KYC Face Biometrics",
 			AutoID:         true,
 			Fields: []*entity.Field{
 				{Name: "id", DataType: entity.FieldTypeInt64, PrimaryKey: true, AutoID: true},
@@ -77,32 +79,64 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 				{Name: "dob", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "128"}},
 				{Name: "gender", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "16"}},
 				{Name: "face_embedding", DataType: entity.FieldTypeFloatVector, TypeParams: map[string]string{"dim": fmt.Sprintf("%d", DimFace)}},
+			},
+		}
+
+		if err := m.client.CreateCollection(ctx, schema, entity.DefaultShardNumber); err != nil {
+			return fmt.Errorf("create face collection failed: %w", err)
+		}
+
+		m.logger.Info().Str("collection", CollectionFace).Msg("Creating face index")
+		idx, err := entity.NewIndexHNSW(entity.L2, 16, 200)
+		if err != nil {
+			return fmt.Errorf("failed to create face index entity: %w", err)
+		}
+		if err := m.client.CreateIndex(ctx, CollectionFace, "face_embedding", idx, false); err != nil {
+			return fmt.Errorf("create face index failed: %w", err)
+		}
+	}
+
+	// Initialize Name Collection
+	hasName, err := m.client.HasCollection(ctx, CollectionName)
+	if err != nil {
+		return fmt.Errorf("has name collection check failed: %w", err)
+	}
+
+	if !hasName {
+		m.logger.Info().Str("name", CollectionName).Msg("Creating name collection")
+		schema := &entity.Schema{
+			CollectionName: CollectionName,
+			Description:    "KYC Name Semantic Embeddings",
+			AutoID:         true,
+			Fields: []*entity.Field{
+				{Name: "id", DataType: entity.FieldTypeInt64, PrimaryKey: true, AutoID: true},
+				{Name: "transaction_id", DataType: entity.FieldTypeVarChar, TypeParams: map[string]string{"max_length": "128"}},
 				{Name: "name_embedding", DataType: entity.FieldTypeFloatVector, TypeParams: map[string]string{"dim": fmt.Sprintf("%d", DimName)}},
 			},
 		}
 
 		if err := m.client.CreateCollection(ctx, schema, entity.DefaultShardNumber); err != nil {
-			return fmt.Errorf("create collection failed: %w", err)
-		}
-
-		m.logger.Info().Str("collection", CollectionName).Msg("Creating face index")
-		idx, err := entity.NewIndexHNSW(entity.L2, 16, 200)
-		if err != nil {
-			return fmt.Errorf("failed to create index entity: %w", err)
-		}
-		if err := m.client.CreateIndex(ctx, CollectionName, "face_embedding", idx, false); err != nil {
-			return fmt.Errorf("create face index failed: %w", err)
+			return fmt.Errorf("create name collection failed: %w", err)
 		}
 
 		m.logger.Info().Str("collection", CollectionName).Msg("Creating name index")
+		idx, err := entity.NewIndexHNSW(entity.L2, 16, 200)
+		if err != nil {
+			return fmt.Errorf("failed to create name index entity: %w", err)
+		}
 		if err := m.client.CreateIndex(ctx, CollectionName, "name_embedding", idx, false); err != nil {
 			return fmt.Errorf("create name index failed: %w", err)
 		}
 	}
 
-	m.logger.Info().Str("name", CollectionName).Msg("Loading collection")
+	m.logger.Info().Str("name", CollectionFace).Msg("Loading face collection")
+	if err := m.client.LoadCollection(ctx, CollectionFace, false); err != nil {
+		return fmt.Errorf("load face collection failed: %w", err)
+	}
+
+	m.logger.Info().Str("name", CollectionName).Msg("Loading name collection")
 	if err := m.client.LoadCollection(ctx, CollectionName, false); err != nil {
-		return fmt.Errorf("load collection failed: %w", err)
+		return fmt.Errorf("load name collection failed: %w", err)
 	}
 
 	return nil
@@ -115,7 +149,7 @@ func (m *MilvusClient) InsertIdentity(ctx context.Context, record *domain.Identi
 	blindIndexes := []string{record.NameBlindIndex}
 	dobs := []string{record.DOB}
 	genders := []string{record.Gender}
-	
+
 	faceSigs := [][]float32{record.FaceEmbedding}
 
 	idCol := entity.NewColumnVarChar("transaction_id", txnIds)
@@ -126,17 +160,28 @@ func (m *MilvusClient) InsertIdentity(ctx context.Context, record *domain.Identi
 	genderCol := entity.NewColumnVarChar("gender", genders)
 	faceCol := entity.NewColumnFloatVector("face_embedding", DimFace, faceSigs)
 
-	nameSigs := [][]float32{record.NameEmbedding}
-	nameEmbCol := entity.NewColumnFloatVector("name_embedding", DimName, nameSigs)
-
-	_, err := m.client.Insert(ctx, CollectionName, "", idCol, hashCol, nameCol, blindCol, dobCol, genderCol, faceCol, nameEmbCol)
+	// Insert into Face Collection
+	_, err := m.client.Insert(ctx, CollectionFace, "", idCol, hashCol, nameCol, blindCol, dobCol, genderCol, faceCol)
 	if err != nil {
-		return fmt.Errorf("insert failed: %w", err)
+		return fmt.Errorf("face insert failed: %w", err)
 	}
 
-	// Flush to ensure it's searchable
+	// Insert into Name Collection
+	nameSigs := [][]float32{record.NameEmbedding}
+	nameIDCol := entity.NewColumnVarChar("transaction_id", txnIds)
+	nameEmbCol := entity.NewColumnFloatVector("name_embedding", DimName, nameSigs)
+
+	_, err = m.client.Insert(ctx, CollectionName, "", nameIDCol, nameEmbCol)
+	if err != nil {
+		return fmt.Errorf("name insert failed: %w", err)
+	}
+
+	// Flush to ensure searchability
+	if err := m.client.Flush(ctx, CollectionFace, false); err != nil {
+		return fmt.Errorf("face flush failed: %w", err)
+	}
 	if err := m.client.Flush(ctx, CollectionName, false); err != nil {
-		return fmt.Errorf("flush failed: %w", err)
+		return fmt.Errorf("name flush failed: %w", err)
 	}
 
 	return nil
@@ -150,7 +195,7 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 
 	// Search primarily by face
 	for i := 0; i < 2; i++ {
-		searchResult, err = m.client.Search(ctx, CollectionName, []string{}, "", []string{"transaction_id", "demographic_hash", "name", "dob", "gender", "name_embedding"},
+		searchResult, err = m.client.Search(ctx, CollectionFace, []string{}, "", []string{"transaction_id", "demographic_hash", "name", "dob", "gender"},
 			[]entity.Vector{entity.FloatVector(faceEmbedding)}, "face_embedding", entity.L2, topK, sp)
 
 		if err == nil {
@@ -158,8 +203,8 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 		}
 
 		if i == 0 {
-			m.logger.Warn().Err(err).Msg("Milvus search failed, attempting to reload collection")
-			_ = m.client.LoadCollection(ctx, CollectionName, true)
+			m.logger.Warn().Err(err).Msg("Milvus search failed, attempting to reload face collection")
+			_ = m.client.LoadCollection(ctx, CollectionFace, true)
 			time.Sleep(500 * time.Millisecond)
 			continue
 		}
@@ -170,10 +215,11 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 	}
 
 	var records []*domain.IdentityRecord
+	var txnIDs []string
+
 	for _, res := range searchResult {
 		for i := 0; i < res.ResultCount; i++ {
 			var txnID, hash, name, dob, gender string
-			var nameEmb []float32
 
 			for _, field := range res.Fields {
 				switch field.Name() {
@@ -197,10 +243,6 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 					if v, ok := field.(*entity.ColumnVarChar); ok {
 						gender, _ = v.ValueByIdx(i)
 					}
-				case "name_embedding":
-					if v, ok := field.(*entity.ColumnFloatVector); ok {
-						nameEmb = v.Data()[i]
-					}
 				}
 			}
 
@@ -210,12 +252,62 @@ func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float3
 				Name:            name,
 				DOB:             dob,
 				Gender:          gender,
-				NameEmbedding:   nameEmb,
 				Score:           res.Scores[i],
 			})
+			txnIDs = append(txnIDs, fmt.Sprintf("\"%s\"", txnID))
 		}
 	}
+
+	if len(txnIDs) == 0 {
+		return records, nil
+	}
+
+	// Fetch name embeddings from the second collection
+	expr := fmt.Sprintf("transaction_id in [%s]", joinStrings(txnIDs, ","))
+	nameResults, err := m.client.Query(ctx, CollectionName, []string{}, expr, []string{"transaction_id", "name_embedding"})
+	if err != nil {
+		m.logger.Error().Err(err).Msg("Failed to fetch name embeddings for search results")
+		return records, nil // Return what we have, though name matching will be disabled
+	}
+
+	// Map name embeddings back to records
+	nameMap := make(map[string][]float32)
+	var txnCol *entity.ColumnVarChar
+	var embCol *entity.ColumnFloatVector
+
+	for _, f := range nameResults {
+		if f.Name() == "transaction_id" {
+			txnCol = f.(*entity.ColumnVarChar)
+		} else if f.Name() == "name_embedding" {
+			embCol = f.(*entity.ColumnFloatVector)
+		}
+	}
+
+	if txnCol != nil && embCol != nil {
+		for i := 0; i < txnCol.Len(); i++ {
+			tid, _ := txnCol.ValueByIdx(i)
+			nameMap[tid] = embCol.Data()[i]
+		}
+	}
+
+	for _, rec := range records {
+		if emb, ok := nameMap[rec.TransactionID]; ok {
+			rec.NameEmbedding = emb
+		}
+	}
+
 	return records, nil
+}
+
+func joinStrings(parts []string, sep string) string {
+	res := ""
+	for i, p := range parts {
+		if i > 0 {
+			res += sep
+		}
+		res += p
+	}
+	return res
 }
 
 func (m *MilvusClient) QueryIdentities(ctx context.Context, name string, gender string) ([]*domain.IdentityRecord, error) {
@@ -228,7 +320,7 @@ func (m *MilvusClient) QueryIdentities(ctx context.Context, name string, gender 
 		expr = fmt.Sprintf("gender == \"%s\"", gender)
 	}
 
-	queryResult, err := m.client.Query(ctx, CollectionName, []string{}, expr, []string{"transaction_id", "demographic_hash", "name", "dob", "gender"})
+	queryResult, err := m.client.Query(ctx, CollectionFace, []string{}, expr, []string{"transaction_id", "demographic_hash", "name", "dob", "gender"})
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
