@@ -61,15 +61,34 @@ type IdentityRecord struct {
 	CreatedAt       time.Time `json:"created_at"`
 }
 
+// User represents a system user
+type User struct {
+	Username     string    `json:"username"`
+	PasswordHash string    `json:"-"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// RegisterRequest represents the user registration request
+type RegisterRequest struct {
+	Username string `json:"username" binding:"required" example:"admin"`
+	Password string `json:"password" binding:"required" min:"8" example:"password123"`
+}
+
 // AuthRequest represents the login request
 type AuthRequest struct {
 	Username string `json:"username" binding:"required" example:"admin"`
 	Password string `json:"password" binding:"required" example:"password123"`
 }
 
-// AuthResponse represents the login response with the JWT token
+// AuthResponse represents the login response with tokens
 type AuthResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type" example:"Bearer"`
-	ExpiresIn   int64  `json:"expires_in" example:"3600"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	TokenType    string `json:"token_type" example:"Bearer"`
+	ExpiresIn    int64  `json:"expires_in" example:"3600"`
+}
+
+// RefreshRequest represents the token refresh request
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
 }

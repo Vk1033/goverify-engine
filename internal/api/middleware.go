@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vk1033/goverify-engine/internal/auth"
 	"github.com/vk1033/goverify-engine/internal/observability"
 )
 
-func AuthMiddleware(manager *JWTManager) gin.HandlerFunc {
+func AuthMiddleware(manager *auth.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {

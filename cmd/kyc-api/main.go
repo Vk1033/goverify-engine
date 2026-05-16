@@ -13,10 +13,12 @@ import (
 	"go.uber.org/fx/fxevent"
 
 	"github.com/vk1033/goverify-engine/internal/api"
+	"github.com/vk1033/goverify-engine/internal/auth"
 	"github.com/vk1033/goverify-engine/internal/config"
 	"github.com/vk1033/goverify-engine/internal/embedding"
 	"github.com/vk1033/goverify-engine/internal/kafka"
 	"github.com/vk1033/goverify-engine/internal/observability"
+	"github.com/vk1033/goverify-engine/internal/repository"
 	"github.com/vk1033/goverify-engine/internal/service"
 	"github.com/vk1033/goverify-engine/internal/vectordb"
 	"github.com/vk1033/goverify-engine/pkg/logger"
@@ -59,8 +61,10 @@ var rootCmd = &cobra.Command{
 				kafka.NewProducer,
 				embedding.ProvideService,
 				vectordb.NewMilvusClient,
+				repository.NewUserRepository,
 				service.NewKYCService,
-				api.ProvideJWTManager,
+				service.NewAuthService,
+				auth.ProvideJWTManager,
 				api.NewHandler,
 				api.NewRouter,
 				NewHTTPServer,

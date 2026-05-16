@@ -8,11 +8,12 @@ import (
 	"github.com/vk1033/goverify-engine/internal/config"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/vk1033/goverify-engine/internal/auth"
 	"github.com/vk1033/goverify-engine/internal/observability"
 	_ "github.com/vk1033/goverify-engine/docs"
 )
 
-func NewRouter(cfg *config.Config, logger *zerolog.Logger, handler *Handler, jwtManager *JWTManager) *gin.Engine {
+func NewRouter(cfg *config.Config, logger *zerolog.Logger, handler *Handler, jwtManager *auth.JWTManager) *gin.Engine {
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -41,18 +42,25 @@ func NewRouter(cfg *config.Config, logger *zerolog.Logger, handler *Handler, jwt
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Auth (Public)
-	r.POST("/auth/login", handler.Login)
+	authGroup := r.Group("/auth")
+	{
+		authGroup.POST("/register", handler.Register)
+		authGroup.POST("/login", handler.Login)
+		authGroup.POST("/refresh", handler.Refresh)
+	}
 
 	// Authenticated routes
 	authenticated := r.Group("/")
 	authenticated.Use(AuthMiddleware(jwtManager))
 	{
-		api := authenticated.Group("/kyc")
+		authenticated.POST("/auth/logout", handler.Logout)
+
+		kyc := authenticated.Group("/kyc")
 		{
-			api.POST("/enroll", handler.Enroll)
-			api.POST("/verify", handler.Verify)
-			api.GET("/status/:transaction_id", handler.Status)
-			api.GET("/search", handler.Search)
+			kyc.POST("/enroll", handler.Enroll)
+			kyc.POST("/verify", handler.Verify)
+			kyc.GET("/status/:transaction_id", handler.Status)
+			kyc.GET("/search", handler.Search)
 		}
 	}
 

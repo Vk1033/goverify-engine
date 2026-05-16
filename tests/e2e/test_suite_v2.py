@@ -43,7 +43,16 @@ class KYCTester:
     def __init__(self):
         self.token = None
 
+    def register(self, username="admin", password="password123"):
+        resp = requests.post(
+            f"{API_URL}/auth/register", json={"username": username, "password": password}
+        )
+        if resp.status_code in [201, 400]:
+            return True
+        return False
+
     def login(self, username="admin", password="password123"):
+        self.register(username, password)
         resp = requests.post(
             f"{API_URL}/auth/login", json={"username": username, "password": password}
         )

@@ -62,12 +62,24 @@ class KYCTester:
             print(f"[!] Failed to start callback server: {e}")
             sys.exit(1)
 
+    def register(self, username="admin", password="password123"):
+        resp = requests.post(
+            f"{API_URL}/auth/register", json={"username": username, "password": password}
+        )
+        if resp.status_code in [201, 400]: # 201 Created or 400 (likely already exists)
+            return True
+        return False
+
     def login(self, username="admin", password="password123"):
+        # Try to register first (ignore if already exists)
+        self.register(username, password)
+        
         resp = requests.post(
             f"{API_URL}/auth/login", json={"username": username, "password": password}
         )
         if resp.status_code == 200:
-            self.token = resp.json()["access_token"]
+            data = resp.json()
+            self.token = data["access_token"]
             return True
         return False
 
