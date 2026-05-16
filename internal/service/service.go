@@ -68,16 +68,11 @@ func (s *serviceImpl) ProcessEnrollment(ctx context.Context, txnID string, req d
 
 	s.logger.Info().Ctx(ctx).Str("txnID", txnID).Msg("processing enrollment")
 
-	faceEmb, err := s.embeddings.GenerateFaceEmbedding(req.PhotoBase64)
+	faceEmb, nameEmb, err := s.embeddings.GenerateIdentityEmbeddings(req.PhotoBase64, req.Name)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("face embedding failed: %w", err)
-	}
-
-	nameEmb, err := s.embeddings.GenerateNameEmbedding(req.Name)
-	if err != nil {
-		return fmt.Errorf("name embedding failed: %w", err)
+		return fmt.Errorf("identity embedding failed: %w", err)
 	}
 
 	demographicHash, err := hash.GenerateDemographicHash(req.DOB, req.Gender, hash.DefaultConfig)
@@ -130,14 +125,9 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 
 	s.logger.Info().Ctx(ctx).Str("txnID", txnID).Msg("processing verification")
 
-	faceEmb, err := s.embeddings.GenerateFaceEmbedding(req.PhotoBase64)
+	faceEmb, nameEmb, err := s.embeddings.GenerateIdentityEmbeddings(req.PhotoBase64, req.Name)
 	if err != nil {
-		return nil, fmt.Errorf("face embedding failed: %w", err)
-	}
-
-	nameEmb, err := s.embeddings.GenerateNameEmbedding(req.Name)
-	if err != nil {
-		return nil, fmt.Errorf("name embedding failed: %w", err)
+		return nil, fmt.Errorf("identity embedding failed: %w", err)
 	}
 
 	searchStart := time.Now()

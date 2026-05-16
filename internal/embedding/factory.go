@@ -10,8 +10,7 @@ import (
 
 // Service defines the interface for generating embeddings.
 type Service interface {
-	GenerateFaceEmbedding(photoBase64 string) ([]float32, error)
-	GenerateNameEmbedding(name string) ([]float32, error)
+	GenerateIdentityEmbeddings(photoBase64 string, name string) (faceEmb []float32, nameEmb []float32, err error)
 }
 
 // normalize normalizes the vector to unit length for cosine similarity

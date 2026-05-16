@@ -123,7 +123,7 @@ def health_check():
 async def get_embedding(request: EmbeddingRequest):
     try:
         img = decode_base64_image(request.image_base64)
-        
+
         # Multi-scale detection loop for high robustness
         best_face = None
         # We try standard, then larger detection sizes for high-res images
@@ -133,13 +133,15 @@ async def get_embedding(request: EmbeddingRequest):
             faces = face_app.get(img)
             best_face = extract_best_face(faces)
             if best_face:
-                logger.info(f"Face found at scale {det_size} with score {best_face.det_score:.2f}")
+                logger.info(
+                    f"Face found at scale {det_size} with score {best_face.det_score:.2f}"
+                )
                 break
-        
+
         if not best_face:
             raise HTTPException(
                 status_code=400,
-                detail="No suitable face detected after multi-scale scan"
+                detail="No suitable face detected after multi-scale scan",
             )
 
         emb = get_embedding_from_face(best_face)

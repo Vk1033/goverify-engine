@@ -26,26 +26,29 @@ func NewPythonClient(baseURL string, logger *zerolog.Logger) *PythonClient {
 	}
 }
 
-type EmbeddingRequest struct {
+type IdentityEmbeddingRequest struct {
 	ImageBase64 string `json:"image_base64"`
+	Name        string `json:"name"`
 }
 
-type EmbeddingResponse struct {
-	Embedding []float32 `json:"embedding"`
+type IdentityEmbeddingResponse struct {
+	FaceEmbedding []float32 `json:"face_embedding"`
+	NameEmbedding []float32 `json:"name_embedding"`
 }
 
-func (p *PythonClient) GenerateFaceEmbedding(photoBase64 string) ([]float32, error) {
-	reqBody := EmbeddingRequest{
+func (p *PythonClient) GenerateIdentityEmbeddings(photoBase64 string, name string) ([]float32, []float32, error) {
+	reqBody := IdentityEmbeddingRequest{
 		ImageBase64: photoBase64,
+		Name:        name,
 	}
 	b, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+		return nil, nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	resp, err := p.client.Post(fmt.Sprintf("%s/represent", p.baseURL), "application/json", bytes.NewBuffer(b))
+	resp, err := p.client.Post(fmt.Sprintf("%s/represent-identity", p.baseURL), "application/json", bytes.NewBuffer(b))
 	if err != nil {
-		return nil, fmt.Errorf("failed to call AI service: %w", err)
+		return nil, nil, fmt.Errorf("failed to call AI service (/represent-identity): %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -54,48 +57,13 @@ func (p *PythonClient) GenerateFaceEmbedding(photoBase64 string) ([]float32, err
 			Detail string `json:"detail"`
 		}
 		json.NewDecoder(resp.Body).Decode(&errResp)
-		return nil, fmt.Errorf("AI service returned error (%d): %s", resp.StatusCode, errResp.Detail)
+		return nil, nil, fmt.Errorf("AI service returned error (%d): %s", resp.StatusCode, errResp.Detail)
 	}
 
-	var result EmbeddingResponse
+	var result IdentityEmbeddingResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	return normalize(result.Embedding), nil
-}
-
-type NameEmbeddingRequest struct {
-	Text string `json:"text"`
-}
-
-func (p *PythonClient) GenerateNameEmbedding(name string) ([]float32, error) {
-	reqBody := NameEmbeddingRequest{
-		Text: name,
-	}
-	b, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	resp, err := p.client.Post(fmt.Sprintf("%s/represent-name", p.baseURL), "application/json", bytes.NewBuffer(b))
-	if err != nil {
-		return nil, fmt.Errorf("failed to call AI service (/represent-name): %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		var errResp struct {
-			Detail string `json:"detail"`
-		}
-		json.NewDecoder(resp.Body).Decode(&errResp)
-		return nil, fmt.Errorf("AI service returned error (%d): %s", resp.StatusCode, errResp.Detail)
-	}
-
-	var result EmbeddingResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	return normalize(result.Embedding), nil
+	return normalize(result.FaceEmbedding), normalize(result.NameEmbedding), nil
 }
