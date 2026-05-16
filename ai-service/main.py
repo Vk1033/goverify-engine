@@ -7,10 +7,27 @@ from insightface.app import FaceAnalysis
 from sentence_transformers import SentenceTransformer
 from prometheus_fastapi_instrumentator import Instrumentator
 import logging
+import os
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# OpenTelemetry Setup
+resource = Resource.create({"service.name": "kyc-ai"})
+provider = TracerProvider(resource=resource)
+otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger-svc:4317")
+otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
+processor = BatchSpanProcessor(otlp_exporter)
+provider.add_span_processor(processor)
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer(__name__)
 
 app = FastAPI(title="GoVerify AI Service (InsightFace)")
 
@@ -258,4 +275,7 @@ async def represent_identity(request: IdentityEmbeddingRequest):
 if __name__ == "__main__":
     import uvicorn
 
+    # Instrument the app
+    FastAPIInstrumentor.instrument_app(app)
+    
     uvicorn.run(app, host="0.0.0.0", port=5000)

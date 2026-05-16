@@ -238,7 +238,7 @@
         "sortOrder": "Descending",
         "wrapLogMessage": true
       },
-      "targets": [{ "expr": "{namespace=\"default\"} |~ \"error|fail|warn\"", "refId": "A" }],
+      "targets": [{ "expr": "{job=\"kubernetes-pods\"} |~ \"error|fail|warn\"", "refId": "A" }],
       "title": "System Alerts & Errors (Loki)",
       "type": "logs"
     }

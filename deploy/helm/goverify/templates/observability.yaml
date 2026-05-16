@@ -32,6 +32,9 @@ data:
           - source_labels: [__meta_kubernetes_namespace]
             action: replace
             target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: replace
+            target_label: job
           - source_labels: [__meta_kubernetes_pod_name]
             action: replace
             target_label: pod
@@ -343,20 +346,29 @@ data:
       - url: http://loki-svc:3100/loki/api/v1/push
     scrape_configs:
       - job_name: kubernetes-pods
+        pipeline_stages:
+          - docker: {}
+          - cri: {}
         kubernetes_sd_configs:
           - role: pod
         relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_controller_name]
-            regex: ([0-9a-z-.]+?)(-[0-9a-f]{8,10})?
-            target_label: container
           - source_labels: [__meta_kubernetes_pod_label_app]
             target_label: app
           - source_labels: [__meta_kubernetes_namespace]
             target_label: namespace
           - source_labels: [__meta_kubernetes_pod_name]
             target_label: pod
-          - target_label: __path__
-            replacement: /var/log/pods/*$1/*.log
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            target_label: container
+          - action: replace
+            regex: (.+);(.+);(.+);(.+)
+            replacement: /var/log/pods/${1}_${2}_${3}/${4}/*.log
+            source_labels:
+              - __meta_kubernetes_namespace
+              - __meta_kubernetes_pod_name
+              - __meta_kubernetes_pod_uid
+              - __meta_kubernetes_pod_container_name
+            target_label: __path__
 ---
 ---
 # Promtail RBAC
@@ -411,6 +423,13 @@ spec:
           image: {{ .Values.observability.promtail.image }}
           args:
             - -config.file=/etc/promtail/promtail.yaml
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
           volumeMounts:
             - name: logs
               mountPath: /var/log/pods

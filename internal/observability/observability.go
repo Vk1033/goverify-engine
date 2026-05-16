@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -108,9 +110,14 @@ var (
 )
 
 func InitTracer(ctx context.Context, serviceName string) (func(), error) {
-	endpoint := "jaeger:4317"
-	// For local testing outside docker, one might set this to localhost:4317
-	// We'll leave it as jaeger:4317 by default for the docker-compose setup.
+	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	if endpoint == "" {
+		endpoint = "jaeger-svc:4317" // fallback to k8s service name
+	}
+	
+	// Remove http:// prefix if present as OTLP gRPC exporter expects host:port
+	endpoint = strings.TrimPrefix(endpoint, "http://")
+	endpoint = strings.TrimPrefix(endpoint, "https://")
 
 	exporter, err := otlptracegrpc.New(ctx, 
 		otlptracegrpc.WithInsecure(),
