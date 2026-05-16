@@ -86,8 +86,12 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 			return fmt.Errorf("create face collection failed: %w", err)
 		}
 
-		m.logger.Info().Str("collection", CollectionFace).Msg("Creating face index")
-		idx, err := entity.NewIndexHNSW(entity.L2, 16, 200)
+		m.logger.Info().Str("collection", CollectionFace).Msg("Creating face index (IVF_PQ)")
+		// IVF_PQ Best Practices:
+		// nlist: 1024 (centroids for clustering)
+		// m: 64 (quantization factor, must divide dimension 512/768)
+		// nbits: 8 (standard)
+		idx, err := entity.NewIndexIvfPQ(entity.L2, 1024, 64, 8)
 		if err != nil {
 			return fmt.Errorf("failed to create face index entity: %w", err)
 		}
@@ -119,8 +123,8 @@ func (m *MilvusClient) initCollection(ctx context.Context) error {
 			return fmt.Errorf("create name collection failed: %w", err)
 		}
 
-		m.logger.Info().Str("collection", CollectionName).Msg("Creating name index")
-		idx, err := entity.NewIndexHNSW(entity.L2, 16, 200)
+		m.logger.Info().Str("collection", CollectionName).Msg("Creating name index (IVF_PQ)")
+		idx, err := entity.NewIndexIvfPQ(entity.L2, 1024, 64, 8)
 		if err != nil {
 			return fmt.Errorf("failed to create name index entity: %w", err)
 		}
@@ -188,7 +192,7 @@ func (m *MilvusClient) InsertIdentity(ctx context.Context, record *domain.Identi
 }
 
 func (m *MilvusClient) SearchSimilar(ctx context.Context, faceEmbedding []float32, nameEmbedding []float32, topK int) ([]*domain.IdentityRecord, error) {
-	sp, _ := entity.NewIndexHNSWSearchParam(74)
+	sp, _ := entity.NewIndexIvfPQSearchParam(16) // nprobe: 16 clusters to search
 
 	var searchResult []client.SearchResult
 	var err error
