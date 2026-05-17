@@ -10,6 +10,8 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/vk1033/goverify-engine/internal/auth"
 	"github.com/vk1033/goverify-engine/internal/observability"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+
 	_ "github.com/vk1033/goverify-engine/docs"
 )
 
@@ -20,11 +22,14 @@ func NewRouter(cfg *config.Config, logger *zerolog.Logger, handler *Handler, jwt
 
 	r := gin.New()
 
+	r.Use(otelgin.Middleware("kyc-api"))
+
 	// Use custom zerolog middleware
 	r.Use(func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
 		logger.Info().
+			Ctx(c.Request.Context()).
 			Str("method", c.Request.Method).
 			Str("path", c.Request.URL.Path).
 			Int("status", c.Writer.Status()).

@@ -68,7 +68,7 @@ func (s *serviceImpl) ProcessEnrollment(ctx context.Context, txnID string, req d
 
 	s.logger.Info().Ctx(ctx).Str("txnID", txnID).Msg("processing enrollment")
 
-	faceEmb, nameEmb, err := s.embeddings.GenerateIdentityEmbeddings(req.PhotoBase64, req.Name)
+	faceEmb, nameEmb, err := s.embeddings.GenerateIdentityEmbeddings(ctx, req.PhotoBase64, req.Name)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -125,7 +125,7 @@ func (s *serviceImpl) ProcessVerification(ctx context.Context, txnID string, req
 
 	s.logger.Info().Ctx(ctx).Str("txnID", txnID).Msg("processing verification")
 
-	faceEmb, nameEmb, err := s.embeddings.GenerateIdentityEmbeddings(req.PhotoBase64, req.Name)
+	faceEmb, nameEmb, err := s.embeddings.GenerateIdentityEmbeddings(ctx, req.PhotoBase64, req.Name)
 	if err != nil {
 		return nil, fmt.Errorf("identity embedding failed: %w", err)
 	}

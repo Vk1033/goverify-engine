@@ -38,5 +38,7 @@ func NewLogger(cfg *config.Config) *zerolog.Logger {
 	// Add TracingHook
 	logger = logger.Hook(TracingHook{})
 
+	zerolog.DefaultContextLogger = &logger
+
 	return &logger
 }

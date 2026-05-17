@@ -2,12 +2,14 @@ package embedding
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type PythonClient struct {
@@ -20,7 +22,8 @@ func NewPythonClient(baseURL string, logger *zerolog.Logger) *PythonClient {
 	return &PythonClient{
 		baseURL: baseURL,
 		client: &http.Client{
-			Timeout: 60 * time.Second,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+			Timeout:   60 * time.Second,
 		},
 		logger: logger,
 	}
@@ -36,7 +39,7 @@ type IdentityEmbeddingResponse struct {
 	NameEmbedding []float32 `json:"name_embedding"`
 }
 
-func (p *PythonClient) GenerateIdentityEmbeddings(photoBase64 string, name string) ([]float32, []float32, error) {
+func (p *PythonClient) GenerateIdentityEmbeddings(ctx context.Context, photoBase64 string, name string) ([]float32, []float32, error) {
 	reqBody := IdentityEmbeddingRequest{
 		ImageBase64: photoBase64,
 		Name:        name,
@@ -46,7 +49,13 @@ func (p *PythonClient) GenerateIdentityEmbeddings(photoBase64 string, name strin
 		return nil, nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	resp, err := p.client.Post(fmt.Sprintf("%s/represent-identity", p.baseURL), "application/json", bytes.NewBuffer(b))
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/represent-identity", p.baseURL), bytes.NewBuffer(b))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := p.client.Do(req)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to call AI service (/represent-identity): %w", err)
 	}

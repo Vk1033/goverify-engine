@@ -1,6 +1,7 @@
 package embedding
 
 import (
+	"context"
 	"fmt"
 	"math"
 
@@ -10,7 +11,7 @@ import (
 
 // Service defines the interface for generating embeddings.
 type Service interface {
-	GenerateIdentityEmbeddings(photoBase64 string, name string) (faceEmb []float32, nameEmb []float32, err error)
+	GenerateIdentityEmbeddings(ctx context.Context, photoBase64 string, name string) (faceEmb []float32, nameEmb []float32, err error)
 }
 
 // normalize normalizes the vector to unit length for cosine similarity

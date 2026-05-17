@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/segmentio/kafka-go"
 	"github.com/vk1033/goverify-engine/internal/config"
@@ -49,10 +51,19 @@ func (p *producerImpl) PublishEnrollment(ctx context.Context, txnID string, req 
 	if err != nil {
 		return err
 	}
+
+	carrier := propagation.MapCarrier{}
+	otel.GetTextMapPropagator().Inject(ctx, carrier)
+	var headers []kafka.Header
+	for k, v := range carrier {
+		headers = append(headers, kafka.Header{Key: k, Value: []byte(v)})
+	}
+
 	msg := kafka.Message{
-		Key:   []byte(txnID),
-		Value: b,
-		Time:  time.Now(),
+		Key:     []byte(txnID),
+		Value:   b,
+		Headers: headers,
+		Time:    time.Now(),
 	}
 	return p.enrollWriter.WriteMessages(ctx, msg)
 }
@@ -62,10 +73,19 @@ func (p *producerImpl) PublishVerification(ctx context.Context, txnID string, re
 	if err != nil {
 		return err
 	}
+
+	carrier := propagation.MapCarrier{}
+	otel.GetTextMapPropagator().Inject(ctx, carrier)
+	var headers []kafka.Header
+	for k, v := range carrier {
+		headers = append(headers, kafka.Header{Key: k, Value: []byte(v)})
+	}
+
 	msg := kafka.Message{
-		Key:   []byte(txnID),
-		Value: b,
-		Time:  time.Now(),
+		Key:     []byte(txnID),
+		Value:   b,
+		Headers: headers,
+		Time:    time.Now(),
 	}
 	return p.verifyWriter.WriteMessages(ctx, msg)
 }

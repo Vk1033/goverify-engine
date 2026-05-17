@@ -9,6 +9,9 @@ import (
 	"github.com/rs/zerolog"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+
 	"github.com/go-redis/redis/v8"
 	"github.com/vk1033/goverify-engine/internal/domain"
 	"github.com/vk1033/goverify-engine/internal/kafka"
@@ -59,22 +62,28 @@ func (w *Worker) consumeEnroll(ctx context.Context) {
 			continue
 		}
 
+		carrier := propagation.MapCarrier{}
+		for _, h := range m.Headers {
+			carrier[h.Key] = string(h.Value)
+		}
+		msgCtx := otel.GetTextMapPropagator().Extract(context.Background(), carrier)
+
 		observability.KafkaConsumerLagMs.Observe(float64(time.Since(m.Time).Milliseconds()))
 
 		txnID := string(m.Key)
 		var req domain.KYCRequest
 		if err := json.Unmarshal(m.Value, &req); err != nil {
-			w.logger.Error().Ctx(ctx).Err(err).Msg("failed to unmarshal enroll req")
-			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
+			w.logger.Error().Ctx(msgCtx).Err(err).Msg("failed to unmarshal enroll req")
+			if rerr := w.redis.Set(msgCtx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
 				w.logger.Error().Err(rerr).Str("txnID", txnID).Msg("Failed to update status in redis")
 			}
 			continue
 		}
 
-		if err := w.svc.ProcessEnrollment(ctx, txnID, req); err != nil {
-			w.logger.Error().Ctx(ctx).Err(err).Str("txnID", txnID).Msg("failed to process enrollment")
+		if err := w.svc.ProcessEnrollment(msgCtx, txnID, req); err != nil {
+			w.logger.Error().Ctx(msgCtx).Err(err).Str("txnID", txnID).Msg("failed to process enrollment")
 			observability.KycEnrollmentsTotal.WithLabelValues("error").Inc()
-			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
+			if rerr := w.redis.Set(msgCtx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
 				w.logger.Error().Err(rerr).Str("txnID", txnID).Msg("Failed to update status in redis")
 			}
 			continue
@@ -82,12 +91,12 @@ func (w *Worker) consumeEnroll(ctx context.Context) {
 
 		observability.KycEnrollmentsTotal.WithLabelValues("success").Inc()
 
-		if err := w.redis.Set(ctx, txnID, string(domain.StatusSuccess), 24*time.Hour).Err(); err != nil {
+		if err := w.redis.Set(msgCtx, txnID, string(domain.StatusSuccess), 24*time.Hour).Err(); err != nil {
 			w.logger.Error().Err(err).Str("txnID", txnID).Msg("failed to update status in redis")
 		}
 
 		if req.CallbackURL != "" {
-			w.sendCallback(ctx, req.CallbackURL, domain.VerificationResult{
+			w.sendCallback(msgCtx, req.CallbackURL, domain.VerificationResult{
 				TransactionID: txnID,
 				Status:        domain.StatusSuccess,
 				CreatedAt:     time.Now(),
@@ -108,23 +117,29 @@ func (w *Worker) consumeVerify(ctx context.Context) {
 			continue
 		}
 
+		carrier := propagation.MapCarrier{}
+		for _, h := range m.Headers {
+			carrier[h.Key] = string(h.Value)
+		}
+		msgCtx := otel.GetTextMapPropagator().Extract(context.Background(), carrier)
+
 		observability.KafkaConsumerLagMs.Observe(float64(time.Since(m.Time).Milliseconds()))
 
 		txnID := string(m.Key)
 		var req domain.KYCRequest
 		if err := json.Unmarshal(m.Value, &req); err != nil {
-			w.logger.Error().Ctx(ctx).Err(err).Msg("failed to unmarshal verify req")
-			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
+			w.logger.Error().Ctx(msgCtx).Err(err).Msg("failed to unmarshal verify req")
+			if rerr := w.redis.Set(msgCtx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
 				w.logger.Error().Err(rerr).Str("txnID", txnID).Msg("Failed to update status in redis")
 			}
 			continue
 		}
 
-		res, err := w.svc.ProcessVerification(ctx, txnID, req)
+		res, err := w.svc.ProcessVerification(msgCtx, txnID, req)
 		if err != nil {
-			w.logger.Error().Ctx(ctx).Err(err).Str("txnID", txnID).Msg("failed to process verification")
+			w.logger.Error().Ctx(msgCtx).Err(err).Str("txnID", txnID).Msg("failed to process verification")
 			observability.KycVerificationsTotal.WithLabelValues("error").Inc()
-			if rerr := w.redis.Set(ctx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
+			if rerr := w.redis.Set(msgCtx, txnID, string(domain.StatusError), 24*time.Hour).Err(); rerr != nil {
 				w.logger.Error().Err(rerr).Str("txnID", txnID).Msg("Failed to update status in redis")
 			}
 			continue
@@ -134,12 +149,12 @@ func (w *Worker) consumeVerify(ctx context.Context) {
 		observability.KycSimilarityScore.Observe(float64(res.ConfidenceScore))
 
 		b, _ := json.Marshal(res)
-		if err := w.redis.Set(ctx, txnID, b, 24*time.Hour).Err(); err != nil {
+		if err := w.redis.Set(msgCtx, txnID, b, 24*time.Hour).Err(); err != nil {
 			w.logger.Error().Err(err).Str("txnID", txnID).Msg("failed to update status in redis")
 		}
 
 		if req.CallbackURL != "" {
-			w.sendCallback(ctx, req.CallbackURL, res)
+			w.sendCallback(msgCtx, req.CallbackURL, res)
 		}
 	}
 }
