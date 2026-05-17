@@ -352,8 +352,12 @@ data:
         kubernetes_sd_configs:
           - role: pod
         relabel_configs:
+          - action: keep
+            regex: ${HOSTNAME}
+            source_labels:
+              - __meta_kubernetes_pod_node_name
           - source_labels: [__meta_kubernetes_pod_label_app]
-            target_label: app
+            target_label: job
           - source_labels: [__meta_kubernetes_namespace]
             target_label: namespace
           - source_labels: [__meta_kubernetes_pod_name]
@@ -362,7 +366,7 @@ data:
             target_label: container
           - action: replace
             regex: (.+);(.+);(.+);(.+)
-            replacement: /var/log/pods/${1}_${2}_${3}/${4}/*.log
+            replacement: /var/log/pods/$${1}_$${2}_$${3}/$${4}/*.log
             source_labels:
               - __meta_kubernetes_namespace
               - __meta_kubernetes_pod_name
@@ -421,8 +425,19 @@ spec:
       containers:
         - name: promtail
           image: {{ .Values.observability.promtail.image }}
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           args:
             - -config.file=/etc/promtail/promtail.yaml
+            - -config.expand-env=true
+            - -client.external-labels=node=$(NODE_NAME)
           resources:
             limits:
               cpu: 200m

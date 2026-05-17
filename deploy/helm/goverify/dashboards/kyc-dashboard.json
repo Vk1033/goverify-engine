@@ -238,16 +238,48 @@
         "sortOrder": "Descending",
         "wrapLogMessage": true
       },
-      "targets": [{ "expr": "{job=\"kubernetes-pods\"} |~ \"error|fail|warn\"", "refId": "A" }],
-      "title": "System Alerts & Errors (Loki)",
+      "targets": [{ "expr": "{job=~\"$job\", pod=~\"$pod\"}", "refId": "A" }],
+      "title": "Service Logs (Loki)",
       "type": "logs"
     }
   ],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".+",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "datasource": "Prometheus",
+        "hide": 0,
+        "includeAll": true,
+        "name": "job",
+        "options": [],
+        "query": "label_values(up, job)",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".+",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "datasource": "Prometheus",
+        "hide": 0,
+        "includeAll": true,
+        "name": "pod",
+        "options": [],
+        "query": "label_values(up{job=~\"$job\"}, pod)",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
   "refresh": "5s",
   "schemaVersion": 30,
   "style": "dark",
   "time": { "from": "now-15m", "to": "now" },
   "title": "KYC Engine - Golden Signals",
   "uid": "kyc_performance",
-  "version": 4
+  "version": 5
 }
