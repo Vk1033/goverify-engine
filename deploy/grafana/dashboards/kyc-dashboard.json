@@ -22,19 +22,43 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" }
+          "color": {
+            "mode": "thresholds"
+          },
+          "links": [
+            {
+              "title": "Drilldown > Traces",
+              "url": "/explore?left=%5B%22now-1h%22%2C%22now%22%2C%22jaeger%22%2C%7B%22service%22%3A%22$job%22%7D%5D",
+              "targetBlank": true
+            }
+          ]
         }
       },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
       "id": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
         "textMode": "auto"
       },
-      "targets": [{ "expr": "sum(goverify_kyc_enrollments_total)", "refId": "A" }],
+      "targets": [
+        {
+          "expr": "sum(goverify_kyc_enrollments_total)",
+          "refId": "A"
+        }
+      ],
       "title": "Total Enrollments",
       "type": "stat"
     },
@@ -42,19 +66,43 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" }
+          "color": {
+            "mode": "thresholds"
+          },
+          "links": [
+            {
+              "title": "Drilldown > Traces",
+              "url": "/explore?left=%5B%22now-1h%22%2C%22now%22%2C%22jaeger%22%2C%7B%22service%22%3A%22$job%22%7D%5D",
+              "targetBlank": true
+            }
+          ]
         }
       },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
       "id": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
         "textMode": "auto"
       },
-      "targets": [{ "expr": "sum(goverify_kyc_verifications_total)", "refId": "A" }],
+      "targets": [
+        {
+          "expr": "sum(goverify_kyc_verifications_total)",
+          "refId": "A"
+        }
+      ],
       "title": "Total Verifications",
       "type": "stat"
     },
@@ -62,20 +110,44 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "percent"
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percent",
+          "links": [
+            {
+              "title": "Drilldown > Traces",
+              "url": "/explore?left=%5B%22now-1h%22%2C%22now%22%2C%22jaeger%22%2C%7B%22service%22%3A%22$job%22%7D%5D",
+              "targetBlank": true
+            }
+          ]
         }
       },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
       "id": 3,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
         "textMode": "auto"
       },
-      "targets": [{ "expr": "sum(rate(goverify_kyc_verifications_total{status=\"error\"}[5m])) / sum(rate(goverify_kyc_verifications_total[5m])) * 100", "refId": "A" }],
+      "targets": [
+        {
+          "expr": "sum(rate(goverify_kyc_verifications_total{status=\"error\"}[5m])) / sum(rate(goverify_kyc_verifications_total[5m])) * 100",
+          "refId": "A"
+        }
+      ],
       "title": "KYC Error Rate",
       "type": "stat"
     },
@@ -83,20 +155,44 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "ms"
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "ms",
+          "links": [
+            {
+              "title": "Drilldown > Traces",
+              "url": "/explore?left=%5B%22now-1h%22%2C%22now%22%2C%22jaeger%22%2C%7B%22service%22%3A%22$job%22%7D%5D",
+              "targetBlank": true
+            }
+          ]
         }
       },
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
       "id": 4,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
         "textMode": "auto"
       },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(goverify_kyc_verify_latency_ms_bucket[1m])) by (le))", "refId": "A" }],
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(goverify_kyc_verify_latency_ms_bucket[1m])) by (le))",
+          "refId": "A"
+        }
+      ],
       "title": "Verify Latency (p95)",
       "type": "stat"
     },
@@ -104,20 +200,44 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "ms"
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "ms",
+          "links": [
+            {
+              "title": "Drilldown > Traces",
+              "url": "/explore?left=%5B%22now-1h%22%2C%22now%22%2C%22jaeger%22%2C%7B%22service%22%3A%22$job%22%7D%5D",
+              "targetBlank": true
+            }
+          ]
         }
       },
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
       "id": 5,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
         "textMode": "auto"
       },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"kyc-ai\"}[1m])) by (le)) * 1000", "refId": "A" }],
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"kyc-ai\"}[1m])) by (le)) * 1000",
+          "refId": "A"
+        }
+      ],
       "title": "AI Latency (p95)",
       "type": "stat"
     },
@@ -125,20 +245,44 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "ms"
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "ms",
+          "links": [
+            {
+              "title": "Drilldown > Traces",
+              "url": "/explore?left=%5B%22now-1h%22%2C%22now%22%2C%22jaeger%22%2C%7B%22service%22%3A%22$job%22%7D%5D",
+              "targetBlank": true
+            }
+          ]
         }
       },
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
       "id": 6,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
         "textMode": "auto"
       },
-      "targets": [{ "expr": "goverify_kafka_consumer_lag_ms{quantile=\"0.9\"}", "refId": "A" }],
+      "targets": [
+        {
+          "expr": "goverify_kafka_consumer_lag_ms{quantile=\"0.9\"}",
+          "refId": "A"
+        }
+      ],
       "title": "Kafka Lag (p90)",
       "type": "stat"
     },
@@ -146,21 +290,56 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 },
-          "unit": "ms"
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          },
+          "unit": "ms",
+          "links": [
+            {
+              "title": "Drilldown > Traces",
+              "url": "/explore?left=%5B%22now-1h%22%2C%22now%22%2C%22jaeger%22%2C%7B%22service%22%3A%22$job%22%7D%5D",
+              "targetBlank": true
+            }
+          ]
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
       "id": 7,
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
-        "tooltip": { "mode": "multi" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
       },
       "targets": [
-        { "expr": "histogram_quantile(0.50, sum(rate(goverify_kyc_verify_latency_ms_bucket[5m])) by (le))", "legendFormat": "KYC p50", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum(rate(goverify_kyc_verify_latency_ms_bucket[5m])) by (le))", "legendFormat": "KYC p95", "refId": "B" },
-        { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"kyc-ai\"}[5m])) by (le)) * 1000", "legendFormat": "AI p95", "refId": "C" }
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(goverify_kyc_verify_latency_ms_bucket[5m])) by (le))",
+          "legendFormat": "KYC p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(goverify_kyc_verify_latency_ms_bucket[5m])) by (le))",
+          "legendFormat": "KYC p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"kyc-ai\"}[5m])) by (le)) * 1000",
+          "legendFormat": "AI p95",
+          "refId": "C"
+        }
       ],
       "title": "Latency Comparison",
       "type": "timeseries"
@@ -169,21 +348,56 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 },
-          "unit": "reqps"
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          },
+          "unit": "reqps",
+          "links": [
+            {
+              "title": "Drilldown > Traces",
+              "url": "/explore?left=%5B%22now-1h%22%2C%22now%22%2C%22jaeger%22%2C%7B%22service%22%3A%22$job%22%7D%5D",
+              "targetBlank": true
+            }
+          ]
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
       "id": 8,
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
-        "tooltip": { "mode": "multi" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
       },
       "targets": [
-        { "expr": "sum(rate(goverify_http_requests_total[1m]))", "legendFormat": "API Req/s", "refId": "A" },
-        { "expr": "sum(rate(http_requests_total{job=\"kyc-ai\"}[1m]))", "legendFormat": "AI Req/s", "refId": "B" },
-        { "expr": "sum(rate(goverify_kyc_verifications_total[1m]))", "legendFormat": "KYC Matches/s", "refId": "C" }
+        {
+          "expr": "sum(rate(goverify_http_requests_total[1m]))",
+          "legendFormat": "API Req/s",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(http_requests_total{job=\"kyc-ai\"}[1m]))",
+          "legendFormat": "AI Req/s",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(goverify_kyc_verifications_total[1m]))",
+          "legendFormat": "KYC Matches/s",
+          "refId": "C"
+        }
       ],
       "title": "Throughput (TPS)",
       "type": "timeseries"
@@ -192,17 +406,42 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" }
+          "color": {
+            "mode": "palette-classic"
+          },
+          "links": [
+            {
+              "title": "Drilldown > Traces",
+              "url": "/explore?left=%5B%22now-1h%22%2C%22now%22%2C%22jaeger%22%2C%7B%22service%22%3A%22$job%22%7D%5D",
+              "targetBlank": true
+            }
+          ]
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 12
+      },
       "id": 9,
       "options": {
-        "displayLabels": ["percent"],
-        "legend": { "displayMode": "list", "placement": "right" },
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "list",
+          "placement": "right"
+        },
         "pieType": "donut"
       },
-      "targets": [{ "expr": "sum by (status) (goverify_kyc_verifications_total)", "legendFormat": "{{status}}", "refId": "A" }],
+      "targets": [
+        {
+          "expr": "sum by (status) (goverify_kyc_verifications_total)",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
       "title": "Verification Outcomes",
       "type": "piechart"
     },
@@ -210,27 +449,63 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 },
-          "unit": "ms"
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          },
+          "unit": "ms",
+          "links": [
+            {
+              "title": "Drilldown > Traces",
+              "url": "/explore?left=%5B%22now-1h%22%2C%22now%22%2C%22jaeger%22%2C%7B%22service%22%3A%22$job%22%7D%5D",
+              "targetBlank": true
+            }
+          ]
         }
       },
-      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 12 },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 12
+      },
       "id": 10,
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
-        "tooltip": { "mode": "multi" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
       },
       "targets": [
-        { "expr": "goverify_kafka_consumer_lag_ms{quantile=\"0.9\"}", "legendFormat": "Kafka Lag p90", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum(rate(goverify_vectordb_search_latency_ms_bucket[5m])) by (le))", "legendFormat": "Milvus Search p95", "refId": "B" }
+        {
+          "expr": "goverify_kafka_consumer_lag_ms{quantile=\"0.9\"}",
+          "legendFormat": "Kafka Lag p90",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(goverify_vectordb_search_latency_ms_bucket[5m])) by (le))",
+          "legendFormat": "Milvus Search p95",
+          "refId": "B"
+        }
       ],
       "title": "Infrastructure Latency",
       "type": "timeseries"
     },
     {
       "datasource": "Loki",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 20 },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
       "id": 11,
       "options": {
         "enableLogDetails": true,
@@ -238,7 +513,12 @@
         "sortOrder": "Descending",
         "wrapLogMessage": true
       },
-      "targets": [{ "expr": "{namespace=\"default\"} |~ \"error|fail|warn\"", "refId": "A" }],
+      "targets": [
+        {
+          "expr": "{namespace=\"default\"} |~ \"error|fail|warn\"",
+          "refId": "A"
+        }
+      ],
       "title": "System Alerts & Errors (Loki)",
       "type": "logs"
     }
@@ -246,7 +526,10 @@
   "refresh": "5s",
   "schemaVersion": 30,
   "style": "dark",
-  "time": { "from": "now-15m", "to": "now" },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
   "title": "KYC Engine - Golden Signals",
   "uid": "kyc_performance",
   "version": 4

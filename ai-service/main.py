@@ -33,6 +33,7 @@ app = FastAPI(title="GoVerify AI Service (InsightFace)")
 
 # Initialize Prometheus Instrumentator
 Instrumentator().instrument(app).expose(app)
+FastAPIInstrumentor.instrument_app(app)
 
 # Initialize InsightFace
 # buffalo_l is the model pack that includes 512-dim embedding model
@@ -274,8 +275,4 @@ async def represent_identity(request: IdentityEmbeddingRequest):
 
 if __name__ == "__main__":
     import uvicorn
-
-    # Instrument the app
-    FastAPIInstrumentor.instrument_app(app)
-    
     uvicorn.run(app, host="0.0.0.0", port=5000)
