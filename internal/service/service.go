@@ -38,7 +38,7 @@ const (
 	WeightDemographic = 0.10 // 10% Demographic Hash Match
 
 	// Thresholds (Calibrated for Real-world variance)
-	ThresholdMatch   = 0.70
+	ThresholdMatch   = 0.75
 	ThresholdPartial = 0.55
 
 	// Biometric Floor (Hard Veto)
