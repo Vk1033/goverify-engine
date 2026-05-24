@@ -13,8 +13,6 @@
 
 - **Biometric Identity**: InsightFace-powered facial embeddings (`buffalo_l`) for high-precision matching.
 - **Semantic Verification**: AI-driven name matching using BERT embeddings and multi-factor demographic hashing (Argon2).
-- **Semantic Verification**: AI-driven name matching using BERT embeddings and multi-factor demographic hashing (Argon2).
-- **Semantic Verification**: AI-driven name matching using BERT embeddings and multi-factor demographic hashing (Argon2).
 - **Production-Ready Deployment**: Automated Kubernetes orchestration via **Helm** with resource limits and health checks.
 - **Optimized AI Service**: Multi-stage Docker builds with pre-downloaded models for lightning-fast container startup.
 - **Event-Driven Scaling**: Kafka-backed asynchronous processing to handle massive request spikes.
